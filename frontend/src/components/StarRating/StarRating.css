@@ -1,0 +1,48 @@
+.star-rating {
+  display: flex;
+  align-items: center;
+}
+
+.star {
+  position: relative;
+  font-size: 24px;
+  margin-right: 5px;
+  cursor: default;
+  transition: transform 0.2s ease;
+}
+
+.star.interactive {
+  cursor: pointer;
+}
+
+.star.interactive:hover {
+  transform: scale(1.1);
+}
+
+.star-filled {
+  color: gold;
+}
+
+.star-half {
+  color: gold;
+}
+
+.star-empty {
+  color: #ccc;
+}
+
+/* Add a subtle glow effect to the stars */
+.star-filled, .star-half {
+  filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5));
+}
+
+/* Add subtle animation for interactive stars */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.star.interactive:hover svg {
+  animation: pulse 1s infinite;
+}
