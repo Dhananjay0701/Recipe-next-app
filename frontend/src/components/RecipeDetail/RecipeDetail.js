@@ -395,6 +395,22 @@ const RecipeDetail = ({ recipes }) => {
             });
     };
 
+    // Helper function to get the correct image URL
+    const getImageUrl = (path) => {
+        // If it's a recipe-photos path (R2 storage), use the API endpoint
+        if (path && path.startsWith('recipe-photos/')) {
+            // Extract the path components
+            const pathParts = path.split('/');
+            // The format is 'recipe-photos/recipeId/filename'
+            if (pathParts.length >= 3) {
+                // Use the existing photos route structure
+                return `${API_URL}/recipes/${pathParts[1]}/photos/${encodeURIComponent(pathParts[2])}`;
+            }
+        }
+        // Otherwise use the static path (for existing local images)
+        return `/static/${path}`;
+    };
+
     if (loading) {
         return <div className="loading">Loading recipe...</div>;
     }
@@ -539,7 +555,7 @@ const RecipeDetail = ({ recipes }) => {
                             onClick={() => openModal(index)}
                         >
                             <img 
-                                src={`/static/${photo}`} 
+                                src={getImageUrl(photo)} 
                                 alt={`Recipe photo ${index + 1}`} 
                             />
                             <button 
@@ -577,7 +593,7 @@ const RecipeDetail = ({ recipes }) => {
                         <button className="modal-close" onClick={closeModal}>×</button>
                         <div className="modal-image-container">
                             <img 
-                                src={`/static/${photos[currentPhotoIndex]}`} 
+                                src={getImageUrl(photos[currentPhotoIndex])} 
                                 alt={`Recipe photo ${currentPhotoIndex + 1}`} 
                                 className="modal-image"
                             />

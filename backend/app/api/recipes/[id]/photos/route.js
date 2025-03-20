@@ -1,7 +1,18 @@
 import { NextResponse } from 'next/server';
 import { getRecipes, saveRecipes } from '../../../../utils/recipe';
-import fs from 'fs';
-import path from 'path';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+
+// Initialize R2 client
+const R2 = new S3Client({
+  region: 'auto',
+  endpoint: process.env.R2_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+  },
+});
+
+const BUCKET_NAME = process.env.R2_BUCKET_NAME;
 
 // GET endpoint to get all photos for a recipe
 export async function GET(request, { params }) {
@@ -52,7 +63,7 @@ export async function POST(request, { params }) {
       );
     }
     
-    // Handle the file upload
+    // Handle the file upload to R2
     const bytes = await photoFile.arrayBuffer();
     const buffer = Buffer.from(bytes);
     
@@ -60,14 +71,18 @@ export async function POST(request, { params }) {
     const filename = Date.now() + '-' + Math.round(Math.random() * 1E9) + '.' + 
                      photoFile.name.split('.').pop();
     
-    const uploadDir = path.join('/Users/dhananjaytalati/code/recipe-manager-new/frontend', 'public', 'static');
+    // Upload to R2
+    const uploadCommand = new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: `recipe-photos/${recipeId}/${filename}`,
+      Body: buffer,
+      ContentType: photoFile.type,
+    });
     
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
+    await R2.send(uploadCommand);
     
-    const filePath = path.join(uploadDir, filename);
-    fs.writeFileSync(filePath, buffer);
+    // Store the R2 path in the recipe data
+    const r2Path = `recipe-photos/${recipeId}/${filename}`;
     
     // Initialize photos array if it doesn't exist
     if (!recipes[recipeIndex].photos) {
@@ -75,11 +90,11 @@ export async function POST(request, { params }) {
     }
     
     // Add the new photo to the recipe
-    recipes[recipeIndex].photos.push(filename);
+    recipes[recipeIndex].photos.push(r2Path);
     saveRecipes(recipes);
     
     return NextResponse.json(
-      { message: 'Photo added successfully', photoPath: filename },
+      { message: 'Photo added successfully', photoPath: r2Path },
       { status: 201 }
     );
   } catch (error) {
