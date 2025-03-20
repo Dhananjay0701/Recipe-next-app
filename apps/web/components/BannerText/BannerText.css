@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Yrsa:ital,wght@0,300..700;1,300..700&display=swap');
+.Banner-text {
+    font-family: "Yrsa", serif;
+    font-weight: 400;
+    position: absolute;
+    display: flex;
+    font-size: 28px;
+    margin-top: 200px;
+    width: 57%;
+    height: 40px;
+    margin-left: 320px;
+    align-items: center;
+    justify-content: center;
+    color: #a4abb2;
+  }
+  
+  .BannerImg {
+    position: absolute;
+    display: flex;
+    font-size: 28px;
+    margin-top: 40px;
+    width: 57%;
+    height: 140px;
+    margin-left: 320px;
+    background-image: url('/static/yir-banner-1900-o.png');
+    align-items: center;
+    justify-content: center;
+    color: #a4abb2;
+  }
+  
+  span.Bt-span {
+    color: white;
+    text-decoration: underline;
+    text-decoration-color: #7a838d;
+    margin-left: 7px;
+  }

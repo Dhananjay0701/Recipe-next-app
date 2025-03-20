@@ -1,0 +1,418 @@
+.recipe-detail-container {
+    max-width: 57%;
+    margin: 0 auto;
+    padding: 20px;
+    color: white;
+}
+
+.back-button {
+    background-color: transparent;
+    border: none;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+.back-button:hover {
+    background-color: #000000;
+}
+
+.recipe-title {
+    font-size: 28px;
+    text-align: left;
+    margin-bottom: 30px;
+    color: white;
+    padding-left: 83%;
+    margin-left: -40%;
+}
+
+.recipe-content {
+    display: flex;
+    gap: 30px;
+}
+
+.recipe-image {
+    flex: 0 0 40%;
+}
+
+.recipe-image img {
+    width: 80%;
+    max-width: 300px;
+    height: 350px;
+    aspect-ratio: 3/4;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.recipe-info {
+    flex: 1;
+}
+
+.recipe-rating {
+    margin-bottom: 20px;
+}
+
+.recipe-rating h3 {
+    margin-bottom: 10px;
+}
+
+.recipe-instructions {
+    margin-bottom: 30px;
+}
+
+.recipe-instructions h3 {
+    margin-bottom: 10px;
+}
+
+.recipe-instructions textarea {
+    background-color: #343A48;
+    color: white;
+    width: 100%;
+    min-height: 200px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 16px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.recipe-ingredients h3 {
+    margin-bottom: 10px;
+}
+
+.ingredients-list {
+    margin-bottom: 15px;
+}
+
+.ingredient-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    justify-content: space-between;
+}
+
+.ingredient-item input[type="checkbox"] {
+    margin-right: 10px;
+}
+
+.ingredient-item span.checked {
+    text-decoration: line-through;
+    color:white
+}
+
+.add-ingredient {
+    display: flex;
+    gap: 10px;
+}
+
+.add-ingredient input {
+    height: 12px;
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.add-ingredient button {
+    height: 34px;
+    padding: 8px 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.add-ingredient button:hover {
+    background-color: #45a049;
+}
+
+.loading, .error {
+    text-align: center;
+    padding: 50px;
+    font-size: 18px;
+    color: #666;
+}
+
+.error {
+    color: #d9534f;
+}
+
+/* Links Table Styling */
+.links-table {
+    margin-top: 20px;
+    width: 100%;
+}
+
+.links-table table {
+    width: 80%;
+    max-width: 300px;
+    border-collapse: collapse;
+}
+
+.links-table th {
+    background-color: #343a48;
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ddd;
+}
+
+.links-table td {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+}
+
+.link-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.link-item a {
+    color: white;
+    text-decoration: none;
+    word-break: break-all;
+    flex-grow: 1;
+}
+
+.link-item a:hover {
+    text-decoration: underline;
+}
+
+.add-link {
+    display: flex;
+    margin-top: 5px;
+}
+
+.add-link input {
+    height: 12px;
+    flex-grow: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.add-link button {
+    height: 34px;
+    margin-left: 8px;
+    padding: 8px 12px;
+    background-color: #5cb85c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* Ingredient Delete Button */
+.delete-btn-ingredient {
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin-left: auto;
+}
+
+.delete-btn-ingredient:hover {
+    background-color: #343A48;
+}
+
+.photo-collage-section {
+  background-color: #1C2028;
+  margin-top: 30px;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.photo-collage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.photo-tile {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.photo-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.add-photo-tile {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #343A48;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.add-photo-tile:hover {
+  background-color: #e5e5e5;
+}
+
+.plus-sign {
+  font-size: 40px;
+  color: #888;
+}
+
+.delete-photo-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.7);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
+  color: #ff3b30;
+}
+
+.uploading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Modal overlay covers the entire screen */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8); /* Darker background for better contrast */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Modal content - now just a container for the image */
+.modal-content {
+  background: transparent; /* Remove background */
+  width: 60vw;
+  height: 70vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden; /* Prevent content from overflowing */
+}
+
+/* Close button styling - make it more visible */
+.modal-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  border: none;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10; /* Ensure it's above the image */
+}
+
+/* Container for the modal image - now fills the modal */
+.modal-image-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure the modal image fits inside the container */
+.modal-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Controls for navigation - now overlaid on the image */
+.modal-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 10; /* Ensure buttons are above the image */
+  background: transparent; /* Semi-transparent background */
+  padding: 8px 16px;
+  border-radius: 4px;
+}
+
+.modal-controls button {
+  padding: 8px 16px;
+  background-color: #007BFF;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.modal-controls button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.extract-ingredients-btn {
+    margin-top: 10px;
+    padding: 8px 16px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.extract-ingredients-btn:hover {
+    background-color: #0056b3;
+}
+
+.extract-ingredients-btn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+} 
