@@ -1,5 +1,7 @@
 {
     "version": 2,
+    "buildCommand": "cd apps/api && npm install && npm run build && cd ../../apps/web && npm install && npm run build",
+    "outputDirectory": "apps/web/.next",
     "builds": [
       {
         "src": "apps/api/next.config.js",
@@ -12,13 +14,12 @@
     ],
     "routes": [
       {
-        "src": "^/api/(.*)",
-        "dest": "apps/api/$1"
+        "src": "/api/(.*)",
+        "dest": "apps/api/api/$1"
       },
       {
-        "src": "^/(.*)",
+        "src": "/(.*)",
         "dest": "apps/web/$1"
       }
     ]
-}
-  
+  } 
