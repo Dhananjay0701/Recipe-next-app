@@ -12,7 +12,8 @@
         "dev": "concurrently \"npm run dev:web\" \"npm run dev:api\"",
         "build:web": "cd apps/web && npm run build",
         "build:api": "cd apps/api && npm run build",
-        "build": "npm run build:web && npm run build:api"
+        "build": "npm run build:web && npm run build:api",
+        "start": "npm run build && concurrently \"npm run start:web\" \"npm run start:api\""
     },
     "devDependencies": {
         "concurrently": "^8.2.2"
