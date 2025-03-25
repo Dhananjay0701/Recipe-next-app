@@ -3,9 +3,6 @@ const getBaseUrl = () => {
   // Check if we're running in the browser
   
   // Server-side rendering
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}` ;
-  }
   //return 'http://localhost:3000';
   return 'http://broiscooked.vercel.app';
 };
