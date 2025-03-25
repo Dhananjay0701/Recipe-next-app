@@ -4,11 +4,6 @@ const getBaseUrl = () => {
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
-  
-  // For custom domain in production (if set)
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
 };
 
 const API_URL = `${getBaseUrl()}/api`;
