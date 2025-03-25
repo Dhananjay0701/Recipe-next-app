@@ -1,4 +1,20 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+// Get deployment URL from Vercel environment or use default
+const getBaseUrl = () => {
+  // For Vercel production environment
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  
+  // For custom domain in production (if set)
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // Local development fallback
+  return 'http://localhost:3000';
+};
+
+const API_URL = `${getBaseUrl()}/api`;
 
 export default API_URL;
 
