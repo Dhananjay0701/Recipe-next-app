@@ -4,7 +4,7 @@ const getBaseUrl = () => {
   
   // Server-side rendering
   //return 'http://localhost:3000';
-  return 'http://broiscooked.vercel.app';
+  return 'https://broiscooked.vercel.app';
 };
 
 // Define API URL without the trailing slash
