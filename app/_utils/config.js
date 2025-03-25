@@ -1,10 +1,6 @@
 // Get deployment URL from Vercel environment or use default
 const getBaseUrl = () => {
   // Check if we're running in the browser
-  if (typeof window !== 'undefined') {
-    // In browser, use the current window location
-    return window.location.origin;
-  }
   
   // Server-side rendering
   if (process.env.VERCEL_URL) {
