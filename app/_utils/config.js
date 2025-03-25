@@ -1,12 +1,19 @@
 // Get deployment URL from Vercel environment or use default
 const getBaseUrl = () => {
-  // For Vercel production environment
+  // Check if we're running in the browser
+  if (typeof window !== 'undefined') {
+    // In browser, use the current window location
+    return window.location.origin;
+  }
+  
+  // Server-side rendering
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
 };
 
-const API_URL = `${getBaseUrl()}/api`;
+// Define API URL without the trailing slash
+const API_URL = getBaseUrl() ? `${getBaseUrl()}/api` : '/api';
 
 export default API_URL;
 
