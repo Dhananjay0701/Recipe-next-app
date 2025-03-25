@@ -9,9 +9,6 @@ const getBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
-  
-  // Local development fallback
-  return 'http://localhost:3000';
 };
 
 const API_URL = `${getBaseUrl()}/api`;
