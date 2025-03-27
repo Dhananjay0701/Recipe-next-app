@@ -1,6 +1,5 @@
 import { getRecipeById, updateRecipe } from '../../../../_utils/recipe';
 import { isSupabaseConfigured } from '../../../../_utils/config';
-import { supabase } from '../../../../_utils/supabase';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 
 // Initialize R2 client
