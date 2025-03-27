@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import StarRating from '../StarRating/StarRating';
 import './RecipeDetail.css';
@@ -16,56 +16,218 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
     const [links, setLinks] = useState([]);
     const [newLink, setNewLink] = useState('');
     const [photos, setPhotos] = useState([]);
-    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [uploadingPhotos, setUploadingPhotos] = useState({}); // Track uploading state by photo ID
     const fileInputRef = React.createRef();
 
     // New state for modal image gallery
     const [modalOpen, setModalOpen] = useState(false);
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+    
+    // Use refs to track state without causing re-renders
+    const isRefreshing = useRef(false);
+    const lastVisibilityChange = useRef(Date.now());
 
+    // Store temp URLs in a ref to persist between renders
+    const tempUrlsRef = useRef({});
+
+    // Simplified refresh recipe data that doesn't cause re-render loops
+    const refreshRecipeData = useCallback(async () => {
+        // Prevent multiple simultaneous refreshes
+        if (isRefreshing.current) return;
+        
+        // Use either recipe.id or recipeId prop
+        const id = recipe?.id || recipeId;
+        if (!id) return;
+        
+        isRefreshing.current = true;
+        try {
+            setLoading(true);
+            const response = await fetch(`${API_URL}/recipes/${id}?t=${Date.now()}`, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to refresh recipe data');
+            }
+            
+            const freshData = await response.json();
+            
+            // Ensure arrays are properly handled
+            const updatedIngredients = Array.isArray(freshData.ingredients) 
+                ? freshData.ingredients 
+                : (typeof freshData.ingredients === 'string' 
+                    ? JSON.parse(freshData.ingredients) 
+                    : []);
+            
+            const updatedLinks = Array.isArray(freshData.links) 
+                ? freshData.links 
+                : (typeof freshData.links === 'string' 
+                    ? JSON.parse(freshData.links) 
+                    : []);
+            
+            const updatedPhotos = Array.isArray(freshData.photos) 
+                ? freshData.photos 
+                : (typeof freshData.photos === 'string' 
+                    ? JSON.parse(freshData.photos) 
+                    : []);
+            
+            setRecipe(freshData);
+            setRecipeText(freshData.recipeText || freshData.recipe_text || '');
+            setIngredients(updatedIngredients);
+            setLinks(updatedLinks);
+            setPhotos(updatedPhotos);
+        } catch (error) {
+            console.error('Error refreshing recipe data:', error);
+        } finally {
+            setLoading(false);
+            isRefreshing.current = false;
+        }
+    }, [recipe?.id, recipeId]);
+
+    // Check for any pending uploads from localStorage
+    const checkPendingUploads = useCallback(() => {
+        if (!recipe?.id) return;
+        
+        // Look for uploads related to this recipe
+        const keys = Object.keys(localStorage).filter(key => 
+            key.startsWith('recipe_upload_') && 
+            key.includes('temp-')
+        );
+        
+        // Process each pending upload
+        keys.forEach(key => {
+            try {
+                const uploadInfo = JSON.parse(localStorage.getItem(key));
+                
+                // Only process uploads for this recipe
+                if (uploadInfo.recipeId !== recipe.id) return;
+                
+                const tempPhotoId = uploadInfo.tempPhotoId;
+                
+                // Check if this upload is already in our photos array
+                const photoExists = photos.some(p => p === tempPhotoId || p === uploadInfo.photoPath);
+                
+                if (!photoExists) {
+                    // If completed, add the final path
+                    if (uploadInfo.status === 'completed' && uploadInfo.photoPath) {
+                        setPhotos(prevPhotos => [...prevPhotos, uploadInfo.photoPath]);
+                        localStorage.removeItem(key); // Clean up
+                    }
+                    // If still uploading or errored but we have a local preview, show it
+                    else if (uploadInfo.status === 'uploading' || uploadInfo.status === 'error') {
+                        // We don't have the image data anymore as we navigated away
+                        // Just clean up and let the next refresh fetch the server data
+                        localStorage.removeItem(key);
+                    }
+                }
+            } catch (error) {
+                console.error('Error parsing upload info:', error);
+                localStorage.removeItem(key); // Clean up invalid data
+            }
+        });
+    }, [recipe?.id, photos]);
+    
+    // Check for pending uploads when component mounts or recipe changes
+    useEffect(() => {
+        checkPendingUploads();
+    }, [recipe?.id, checkPendingUploads]);
+
+    // Initialize data from props or fetch it - only run once
     useEffect(() => {
         if (initialRecipe) {
             setRecipe(initialRecipe);
-            setRecipeText(initialRecipe.recipeText || '');
-            setIngredients(initialRecipe.ingredients || []);
-            setLinks(initialRecipe.links || []);
-            setPhotos(initialRecipe.photos || []);
+            setRecipeText(initialRecipe.recipeText || initialRecipe.recipe_text || '');
+            
+            // Ensure arrays are properly handled
+            const initialIngredients = Array.isArray(initialRecipe.ingredients) 
+                ? initialRecipe.ingredients 
+                : (typeof initialRecipe.ingredients === 'string' 
+                    ? JSON.parse(initialRecipe.ingredients) 
+                    : []);
+            
+            const initialLinks = Array.isArray(initialRecipe.links) 
+                ? initialRecipe.links 
+                : (typeof initialRecipe.links === 'string' 
+                    ? JSON.parse(initialRecipe.links) 
+                    : []);
+            
+            const initialPhotos = Array.isArray(initialRecipe.photos) 
+                ? initialRecipe.photos 
+                : (typeof initialRecipe.photos === 'string' 
+                    ? JSON.parse(initialRecipe.photos) 
+                    : []);
+            
+            setIngredients(initialIngredients);
+            setLinks(initialLinks);
+            setPhotos(initialPhotos);
             setLoading(false);
+            
+            // Always fetch fresh data even if we got initialRecipe
+            // This ensures we have the most up-to-date data
+            setTimeout(() => {
+                if (recipeId) {
+                    refreshRecipeData();
+                }
+            }, 10);
+            
             return;
         }
 
         // If no initialRecipe, fetch the recipe data
         if (recipeId) {
-            fetch(`${API_URL}/recipes/${recipeId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Recipe not found');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    setRecipe(data);
-                    setRecipeText(data.recipeText || '');
-                    setIngredients(data.ingredients || []);
-                    setLinks(data.links || []);
-                    setPhotos(data.photos || []);
-                    setLoading(false);
-                })
-                .catch(error => {
-                    console.error('Error fetching recipe:', error);
-                    setLoading(false);
-                });
+            refreshRecipeData();
         }
-    }, [initialRecipe, recipeId]);
+        
+        // Cleanup function to remove all temp URLs when component unmounts
+        return () => {
+            // Clear any temporary URLs to prevent memory leaks
+            Object.keys(tempUrlsRef.current).forEach(key => {
+                delete tempUrlsRef.current[key];
+            });
+        };
+    }, [initialRecipe, recipeId, refreshRecipeData]);
+
+    // Very limited refresh on visibility change - with throttling
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            // Only refresh if page becomes visible AND it's been at least 5 seconds since last refresh
+            if (document.visibilityState === 'visible' && 
+                recipe?.id && 
+                Date.now() - lastVisibilityChange.current > 5000) {
+                
+                lastVisibilityChange.current = Date.now();
+                refreshRecipeData();
+            }
+        };
+        
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [refreshRecipeData, recipe?.id]);
 
     const handleRatingChange = (newRating) => {
         if (!recipe) return;
         
         const numericRating = parseFloat(newRating);
+        
+        // Optimistic update - update UI immediately with both case variations to ensure consistency
+        setRecipe({ 
+            ...recipe, 
+            rating: numericRating, 
+            Rating: numericRating 
+        });
+        
         fetch(`${API_URL}/recipes/${recipe.id}/rating`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
             },
             body: JSON.stringify({ rating: numericRating }),
         })
@@ -76,12 +238,20 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
                 return response.json();
             })
             .then(data => {
-                setRecipe({ ...recipe, Rating: numericRating });
-                window.dispatchEvent(new CustomEvent('recipe-updated'));
                 console.log('Rating updated successfully');
+                // Update with server response to ensure consistency
+                if (data) {
+                    const updatedRating = data.Rating || data.rating || numericRating;
+                    setRecipe(prevRecipe => ({
+                        ...prevRecipe,
+                        rating: updatedRating,
+                        Rating: updatedRating
+                    }));
+                }
             })
             .catch(error => {
                 console.error('Error updating rating:', error);
+                refreshRecipeData();
             });
     };
 
@@ -91,6 +261,10 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
 
     const saveRecipeText = () => {
         if (!recipe) return;
+        
+        // Optimistic update
+        const updatedRecipe = { ...recipe, recipeText: recipeText };
+        setRecipe(updatedRecipe);
         
         fetch(`${API_URL}/recipes/${recipe.id}/text`, {
             method: 'PUT',
@@ -105,28 +279,44 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
             })
             .catch(error => {
                 console.error('Error saving recipe text:', error);
+                refreshRecipeData();
             });
     };
 
     const handleIngredientCheck = (index) => {
         const updatedIngredients = [...ingredients];
         updatedIngredients[index].checked = !updatedIngredients[index].checked;
+        
+        // Update local state first (optimistic update)
         setIngredients(updatedIngredients);
+        
         if (!recipe) return;
         
         fetch(`${API_URL}/recipes/${recipe.id}/ingredients`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
             },
             body: JSON.stringify({ ingredients: updatedIngredients }),
         })
             .then(response => response.json())
-            .then(() => {
-                window.dispatchEvent(new CustomEvent('recipe-updated'));
+            .then(updatedRecipe => {
+                // Update with the data from the server to ensure consistency
+                if (updatedRecipe && updatedRecipe.ingredients) {
+                    const serverIngredients = Array.isArray(updatedRecipe.ingredients) 
+                        ? updatedRecipe.ingredients 
+                        : (typeof updatedRecipe.ingredients === 'string' 
+                            ? JSON.parse(updatedRecipe.ingredients) 
+                            : []);
+                    
+                    setIngredients(serverIngredients);
+                }
+                console.log('Ingredient updated successfully');
             })
             .catch(error => {
                 console.error('Error updating ingredients:', error);
+                refreshRecipeData();
             });
     };
 
@@ -136,30 +326,35 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
         const newIngredientObj = { name: newIngredient, checked: false };
         const updatedIngredients = [...ingredients, newIngredientObj];
         
-        //console.log('Sending ingredients update for recipe ID:', recipe.id);
-        //console.log('Updated ingredients:', updatedIngredients);
+        // Optimistic update - immediately show the new ingredient
+        setIngredients(updatedIngredients);
+        setNewIngredient(''); // Clear the input field immediately
         
         fetch(`${API_URL}/recipes/${recipe.id}/ingredients`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
             },
             body: JSON.stringify({ ingredients: updatedIngredients }),
         })
-            .then(response => {
-                console.log('Response status:', response.status);
-                if (!response.ok) {
-                    throw new Error('Failed to update ingredients');
+            .then(response => response.json())
+            .then(updatedRecipe => {
+                // Update with the data from the server to ensure consistency
+                if (updatedRecipe && updatedRecipe.ingredients) {
+                    const serverIngredients = Array.isArray(updatedRecipe.ingredients) 
+                        ? updatedRecipe.ingredients 
+                        : (typeof updatedRecipe.ingredients === 'string' 
+                            ? JSON.parse(updatedRecipe.ingredients) 
+                            : []);
+                    
+                    setIngredients(serverIngredients);
                 }
-                return response.json();
-            })
-            .then(() => {
-                setIngredients(updatedIngredients);
-                setNewIngredient('');
-                window.dispatchEvent(new CustomEvent('recipe-updated'));
+                console.log('Ingredient added successfully');
             })
             .catch(error => {
                 console.error('Error adding ingredient:', error);
+                refreshRecipeData();
             });
     };
 
@@ -169,6 +364,9 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
         const updatedIngredients = [...ingredients];
         updatedIngredients.splice(index, 1);
         
+        // Optimistic update - immediately remove the ingredient
+        setIngredients(updatedIngredients);
+        
         fetch(`${API_URL}/recipes/${recipe.id}/ingredients`, {
             method: 'PUT',
             headers: {
@@ -183,11 +381,14 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
                 return response.json();
             })
             .then(() => {
-                setIngredients(updatedIngredients);
-                window.dispatchEvent(new CustomEvent('recipe-updated'));
+                // Successfully saved to backend
+                console.log('Ingredient deleted successfully');
+                // State is already updated optimistically
             })
             .catch(error => {
                 console.error('Error deleting ingredient:', error);
+                // Only refresh on error to recover
+                refreshRecipeData();
             });
     };
 
@@ -195,6 +396,10 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
         if (!newLink.trim() || !recipe) return;
         
         const updatedLinks = [...links, newLink];
+        
+        // Optimistic update - immediately show the new link
+        setLinks(updatedLinks);
+        setNewLink(''); // Clear the input field immediately
         
         fetch(`${API_URL}/recipes/${recipe.id}/links`, {
             method: 'PUT',
@@ -210,12 +415,14 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
                 return response.json();
             })
             .then(() => {
-                setLinks(updatedLinks);
-                setNewLink('');
-                window.dispatchEvent(new CustomEvent('recipe-updated'));
+                // Successfully saved to backend
+                console.log('Link added successfully');
+                // State is already updated optimistically
             })
             .catch(error => {
                 console.error('Error adding link:', error);
+                // Only refresh on error to recover
+                refreshRecipeData();
             });
     };
 
@@ -225,6 +432,9 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
         const updatedLinks = [...links];
         updatedLinks.splice(index, 1);
         
+        // Optimistic update - immediately remove the link
+        setLinks(updatedLinks);
+        
         fetch(`${API_URL}/recipes/${recipe.id}/links`, {
             method: 'PUT',
             headers: {
@@ -239,11 +449,14 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
                 return response.json();
             })
             .then(() => {
-                setLinks(updatedLinks);
-                window.dispatchEvent(new CustomEvent('recipe-updated'));
+                // Successfully saved to backend
+                console.log('Link deleted successfully');
+                // State is already updated optimistically
             })
             .catch(error => {
                 console.error('Error deleting link:', error);
+                // Only refresh on error to recover
+                refreshRecipeData();
             });
     };
 
@@ -259,38 +472,110 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
         const file = e.target.files[0];
         if (!file || !recipe) return;
 
-        const formData = new FormData();
-        formData.append('photo', file);
-
-        setUploadingPhoto(true);
-
-        fetch(`${API_URL}/recipes/${recipe.id}/photos`, {
-            method: 'POST',
-            body: formData,
-        })
-            .then(async (response) => {
-                const responseClone = response.clone();
-                try {
-                    const data = await response.json();
-                    if (!response.ok) {
-                        throw new Error(data.message || 'Failed to upload photo');
+        // Create a temporary ID for the photo
+        const tempPhotoId = `temp-${Date.now()}`;
+        
+        // Create a FileReader to read the file as data URL for preview
+        const reader = new FileReader();
+        reader.onload = (loadEvent) => {
+            // Store the data URL in the ref to persist between renders
+            tempUrlsRef.current[tempPhotoId] = loadEvent.target.result;
+            
+            // Add the temporary photo to the list
+            setPhotos(prevPhotos => [...prevPhotos, tempPhotoId]);
+            
+            // Mark this specific photo as uploading
+            setUploadingPhotos(prev => ({
+                ...prev,
+                [tempPhotoId]: true
+            }));
+            
+            // Now start the actual upload to the server
+            const formData = new FormData();
+            formData.append('photo', file);
+            
+            // Store the upload info in localStorage to track it across page navigations
+            const uploadInfo = {
+                tempPhotoId,
+                recipeId: recipe.id,
+                timestamp: Date.now(),
+                filename: file.name,
+                status: 'uploading'
+            };
+            localStorage.setItem(`recipe_upload_${tempPhotoId}`, JSON.stringify(uploadInfo));
+            
+            // Use keepalive flag to ensure the request continues even if page is unloaded
+            fetch(`${API_URL}/recipes/${recipe.id}/photos`, {
+                method: 'POST',
+                body: formData,
+                keepalive: true, // This is the key flag that allows the request to continue
+                // Set a longer timeout than default
+                signal: AbortSignal.timeout(120000) // 2 minute timeout
+            })
+                .then(async (response) => {
+                    const responseClone = response.clone();
+                    try {
+                        const data = await response.json();
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Failed to upload photo');
+                        }
+                        return data;
+                    } catch (jsonError) {
+                        const textError = await responseClone.text();
+                        throw new Error(textError || 'Failed to upload photo');
                     }
-                    return data;
-                } catch (jsonError) {
-                    const textError = await responseClone.text();
-                    throw new Error(textError || 'Failed to upload photo');
-                }
-            })
-            .then(data => {
-                setPhotos([...photos, data.photoPath]);
-                setUploadingPhoto(false);
-                window.dispatchEvent(new CustomEvent('recipe-updated'));
-            })
-            .catch(error => {
-                console.error('Error uploading photo:', error);
-                alert(`Error uploading photo: ${error.message}`);
-                setUploadingPhoto(false);
-            });
+                })
+                .then(data => {
+                    console.log('Photo uploaded successfully:', data.photoPath);
+                    
+                    // Update the localStorage info to mark this upload as completed
+                    localStorage.setItem(`recipe_upload_${tempPhotoId}`, JSON.stringify({
+                        ...uploadInfo,
+                        status: 'completed',
+                        photoPath: data.photoPath
+                    }));
+                    
+                    // Replace the temp photo with the real one
+                    setPhotos(prevPhotos => 
+                        prevPhotos.map(p => p === tempPhotoId ? data.photoPath : p)
+                    );
+                    
+                    // Clear uploading state for this photo
+                    setUploadingPhotos(prev => {
+                        const updated = {...prev};
+                        delete updated[tempPhotoId];
+                        return updated;
+                    });
+                    
+                    // Note: We don't delete the temp URL yet - keep it around
+                    // in case we need to display it again before the server image loads
+                    // We'll clean it up when the component unmounts
+                })
+                .catch(error => {
+                    console.error('Error uploading photo:', error);
+                    
+                    // Update localStorage with the error
+                    localStorage.setItem(`recipe_upload_${tempPhotoId}`, JSON.stringify({
+                        ...uploadInfo,
+                        status: 'error',
+                        error: error.message
+                    }));
+                    
+                    // Just remove the loading indicator
+                    setUploadingPhotos(prev => {
+                        const updated = {...prev};
+                        delete updated[tempPhotoId];
+                        return updated;
+                    });
+                    
+                    // Show error but don't remove the image - it still looks good
+                    // and will be synced next time they reload
+                    alert(`Error uploading photo: ${error.message}. The image will appear to be saved but won't persist until internet connection is restored.`);
+                });
+        };
+        
+        // Start reading the file as a data URL
+        reader.readAsDataURL(file);
     };
 
     const deletePhoto = (index) => {
@@ -300,8 +585,20 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
         const updatedPhotos = [...photos];
         updatedPhotos.splice(index, 1);
         
-        fetch(`${API_URL}/recipes/${recipe.id}/photos/${encodeURIComponent(photoToDelete)}`, {
+        // Optimistic update - immediately remove the photo
+        setPhotos(updatedPhotos);
+        
+        // For clarity, extract just the filename without the path
+        let filename = photoToDelete;
+        if (photoToDelete.includes('/')) {
+            filename = photoToDelete.split('/').pop();
+        }
+        
+        fetch(`${API_URL}/recipes/${recipe.id}/photos/${encodeURIComponent(filename)}`, {
             method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
         })
             .then(response => {
                 if (!response.ok) {
@@ -310,11 +607,13 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
                 return response.json();
             })
             .then(() => {
-                setPhotos(updatedPhotos);
-                window.dispatchEvent(new CustomEvent('recipe-updated'));
+                // Photo already removed from UI via optimistic update
+                console.log('Photo deleted successfully');
             })
             .catch(error => {
                 console.error('Error deleting photo:', error);
+                alert(`Error deleting photo: ${error.message}`);
+                refreshRecipeData(); // Reload data on error
             });
     };
 
@@ -365,7 +664,9 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
                     );
                     
                     if (newIngredients.length > 0) {
+                        // Optimistic update - immediately show extracted ingredients
                         const updatedIngredients = [...ingredients, ...newIngredients];
+                        setIngredients(updatedIngredients);
                         
                         // Update ingredients in backend
                         fetch(`${API_URL}/recipes/${recipe.id}/ingredients`, {
@@ -377,22 +678,29 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
                         })
                             .then(response => response.json())
                             .then(() => {
-                                setIngredients(updatedIngredients);
-                                window.dispatchEvent(new CustomEvent('recipe-updated'));
+                                console.log('Extracted ingredients saved successfully');
                             })
                             .catch(error => {
                                 console.error('Error updating ingredients:', error);
+                                refreshRecipeData(); // Reload data on error
                             });
                     }
                 }
             })
             .catch(error => {
                 console.error('Error extracting ingredients:', error);
+                refreshRecipeData(); // Reload data on error
             });
     };
 
     // Helper function to get the correct image URL
     const getImageUrl = (path) => {
+        // Check if this is a temp path from optimistic UI update
+        if (path && path.startsWith('temp-')) {
+            // Use the temporary URL from our tempUrlsRef
+            return tempUrlsRef.current[path] || '/static/placeholder-image.jpg';
+        }
+            
         // If it's a recipe-photos path (R2 storage), use the API endpoint
         if (path && path.startsWith('recipe-photos/')) {
             // Extract the path components
@@ -422,12 +730,20 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
             </button>
             
             <h1 className="recipe-title">
-                {String(recipe.Name).charAt(0).toUpperCase() + String(recipe.Name).slice(1)}
+                {(recipe.Name || recipe.name) ? 
+                    String(recipe.Name || recipe.name).charAt(0).toUpperCase() + 
+                    String(recipe.Name || recipe.name).slice(1)
+                : 'Untitled Recipe'}
             </h1>
             
             <div className="recipe-content">
                 <div className="recipe-image">
-                    <img src={`/static/${recipe.Image_path}`} alt={recipe.Name} />
+                    {recipe.image_path && (
+                        <img 
+                            src={getImageUrl(recipe.image_path)} 
+                            alt={recipe.name || 'Recipe image'} 
+                        />
+                    )}
                     
                     <div className="links-table">
                         <table>
@@ -481,7 +797,7 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
                     <div className="recipe-rating">
                         <h3>Rating</h3>
                         <StarRating 
-                            rating={recipe.Rating} 
+                            rating={recipe.rating || recipe.Rating || 0} 
                             interactive={true} 
                             onRatingChange={handleRatingChange} 
                         />
@@ -554,6 +870,9 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
                                 src={getImageUrl(photo)} 
                                 alt={`Recipe photo ${index + 1}`} 
                             />
+                            {uploadingPhotos[photo] && (
+                                <div className="uploading-overlay">Uploading...</div>
+                            )}
                             <button 
                                 className="delete-photo-btn" 
                                 onClick={(e) => { 
@@ -577,7 +896,6 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
                             accept="image/*"
                             onChange={handlePhotoUpload}
                         />
-                        {uploadingPhoto && <div className="uploading-overlay">Uploading...</div>}
                     </div>
                 </div>
             </div>

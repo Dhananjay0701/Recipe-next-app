@@ -1,27 +1,58 @@
-import { getRecipes, saveRecipes } from '../../_utils/recipe';
-import { NextResponse } from 'next/server';
+
+import { getRecipes, getRecipeById, saveRecipe, updateRecipe, deleteRecipe } from '../../_utils/recipe';
+import { isSupabaseConfigured } from '../../_utils/config';
 import fs from 'fs';
-import path from 'path';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 
+// Handler for database connection errors
+const handleDatabaseError = (error) => {
+  console.error('Database connection error:', error);
+  return Response.json({
+      error: 'Database connection error', 
+      message: 'Could not connect to Supabase database',
+      details: error.message
+    },
+    { 
+      status: 503,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+};
+
+// Ensure we have access to Supabase
+const ensureSupabaseAccess = () => {
+  if (!isSupabaseConfigured()) {
+    const error = new Error('Supabase configuration required. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.');
+    throw error;
+  }
+};
+
 // Handle GET requests
-export async function GET() {
+export async function GET(request) {
   try {
-    const recipes = getRecipes();
-    return NextResponse.json(recipes, { status: 200 });
+    // Check if we have access to the Supabase database
+    console.log('GET request to /api/recipes');
+    ensureSupabaseAccess();
+    
+    // Get all recipes from the database
+    const recipes = await getRecipes();
+    console.log('Recipes fetched:', recipes.length);
+    return Response.json(recipes);
   } catch (error) {
-    console.error('Error retrieving recipes:', error);
-    return NextResponse.json(
-      { message: 'Error retrieving recipes', error: error.toString() }, 
-      { status: 500 }
-    );
+    console.error('Error fetching recipes:', error);
+    return handleDatabaseError(error);
   }
 }
 
 // Handle POST requests
 export async function POST(request) {
   try {
+    // Check if we have access to the Supabase database
+    ensureSupabaseAccess();
+    
     const formData = await request.formData();
     
     const name = formData.get('name');
@@ -57,7 +88,7 @@ export async function POST(request) {
 
     // Validate input
     if (!name || !rating) {
-      return NextResponse.json(
+      return Response.json(
         { message: 'Name and rating are required' }, 
         { status: 400 }
       );
@@ -67,7 +98,7 @@ export async function POST(request) {
     const imageFile = formData.get('image');
     
     if (!imageFile) {
-      return NextResponse.json(
+      return Response.json(
         { message: 'Image file is required' }, 
         { status: 400 }
       );
@@ -105,27 +136,72 @@ export async function POST(request) {
       Rating: parseFloat(rating),
       recipeText: recipeText || '',
       ingredients: ingredients || [],
-      links: links || []
+      links: links || [],
+      photos: photos || []
     };
 
-    // Add to recipes
-    const recipes = getRecipes();
-    recipes.push(newRecipe);
-    saveRecipes(recipes);
-
-    return NextResponse.json(newRecipe, { status: 201 });
+    // Save to database
+    const savedRecipe = await saveRecipe(newRecipe);
+    
+    return Response.json(savedRecipe, { status: 201 });
   } catch (error) {
     console.error('Error adding recipe:', error);
-    return NextResponse.json(
-      { message: 'Error adding recipe', error: error.toString() },
-      { status: 500 }
+    return handleDatabaseError(error);
+  }
+}
+
+// Handle PUT requests to update existing recipes
+export async function PUT(request) {
+  try {
+    ensureSupabaseAccess();
+    
+    const { id, ...recipeData } = await request.json();
+    
+    if (!id) {
+      return Response.json(
+        { message: 'Recipe ID is required' },
+        { status: 400 }
+      );
+    }
+    
+    const updatedRecipe = await updateRecipe(id, recipeData);
+    
+    return Response.json(updatedRecipe);
+  } catch (error) {
+    console.error('Error updating recipe:', error);
+    return handleDatabaseError(error);
+  }
+}
+
+// Handle DELETE requests
+export async function DELETE(request) {
+  try {
+    ensureSupabaseAccess();
+    
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    
+    if (!id) {
+      return Response.json(
+        { message: 'Recipe ID is required' },
+        { status: 400 }
+      );
+    }
+    
+    await deleteRecipe(id);
+    
+    return Response.json(
+      { message: 'Recipe deleted successfully' }
     );
+  } catch (error) {
+    console.error('Error deleting recipe:', error);
+    return handleDatabaseError(error);
   }
 }
 
 // Handle OPTIONS requests for CORS
 export async function OPTIONS() {
-  return new NextResponse(null, {
+  return new Response(null, {
     status: 200,
     headers: {
       'Access-Control-Allow-Credentials': 'true',

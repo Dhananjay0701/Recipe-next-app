@@ -1,28 +1,65 @@
-import { NextResponse } from 'next/server';
-import { getRecipes, saveRecipes } from '../../../_utils/recipe';
 
+import { getRecipeById, updateRecipe, deleteRecipe } from '../../../_utils/recipe';
+import { isSupabaseConfigured } from '../../../_utils/config';
+
+// Handler for database connection errors
+const handleDatabaseError = (error) => {
+  console.error('Database connection error:', error);
+  return Response.json({ 
+    error: 'Database connection error', 
+    message: 'Could not connect to Supabase database',
+    details: error.message
+  }, { status: 503 });
+};
+
+// Ensure we're running with Supabase access
+const ensureSupabaseAccess = () => {
+  if (!isSupabaseConfigured()) {
+    const error = new Error('Supabase configuration required. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.');
+    throw error;
+  }
+};
 
 // GET endpoint to retrieve a specific recipe by ID
 export async function GET(request, { params }) {
   try {
-    const recipeId = params.id;
-    const recipes = getRecipes();
-    // Find recipe by ID
-    const recipe = recipes.find(r => String(r.id) === String(recipeId));
+    console.log('GET request to /api/recipes/[id]', params);
+    const { id } = params;
     
+    if (!id) {
+      return Res.json(
+        { error: 'Recipe ID is required' },
+        { status: 400 }
+      );
+    }
+    
+    // Add validation to ensure ID is a number
+    const numericId = Number(id);
+    if (isNaN(numericId)) {
+      return Response.json(
+        { error: `Invalid recipe ID: ${id}. ID must be a number.` },
+        { status: 400 }
+      );
+    }
+    
+    // Ensure we have Supabase database access
+    ensureSupabaseAccess();
+    
+    // Fetch the recipe
+    const recipe = await getRecipeById(numericId);
+    
+    // If recipe not found
     if (!recipe) {
-      return NextResponse.json(
-        { message: 'Recipe not found' }, 
+      return Response.json(
+        { error: `Recipe not found with ID: ${id}` },
         { status: 404 }
       );
     }
     
-    return NextResponse.json(recipe);
+    return Response.json(recipe);
   } catch (error) {
-    return NextResponse.json(
-      { message: 'Error retrieving recipe', error: error.toString() },
-      { status: 500 }
-    );
+    console.error(`Error fetching recipe with ID: ${params?.id}`, error);
+    return handleDatabaseError(error);
   }
 }
 
@@ -30,42 +67,94 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     const recipeId = params.id;
+    
+    // Add validation to ensure ID is a number
+    const numericId = Number(recipeId);
+    if (isNaN(numericId)) {
+      return Response.json(
+        { error: `Invalid recipe ID: ${recipeId}. ID must be a number.` },
+        { status: 400 }
+      );
+    }
+    
     const data = await request.json();
     
     // Basic validation
     if (!data) {
-      return NextResponse.json(
+      return Response.json(
         { message: 'No update data provided' },
         { status: 400 }
       );
     }
     
-    const recipes = getRecipes();
-    const recipeIndex = recipes.findIndex(r => String(r.id) === String(recipeId));
+    // Ensure we have Supabase database access
+    ensureSupabaseAccess();
     
-    if (recipeIndex === -1) {
-      return NextResponse.json(
+    // Get existing recipe
+    const existingRecipe = await getRecipeById(numericId);
+    
+    if (!existingRecipe) {
+      return Response.json(
         { message: 'Recipe not found' },
         { status: 404 }
       );
     }
     
-    // Update recipe fields (excluding id and creation properties)
-    const updatedRecipe = {
-      ...recipes[recipeIndex],
-      ...data,
-      // Preserve the original id
-      id: recipes[recipeIndex].id
-    };
+    // Update recipe in Supabase
+    const updatedRecipe = await updateRecipe(numericId, data);
     
-    recipes[recipeIndex] = updatedRecipe;
-    saveRecipes(recipes);
-    
-    return NextResponse.json(updatedRecipe);
+    return Response.json(updatedRecipe);
   } catch (error) {
-    return NextResponse.json(
-      { message: 'Error updating recipe', error: error.toString() },
-      { status: 500 }
-    );
+    console.error('Error updating recipe:', error);
+    return handleDatabaseError(error);
   }
+}
+
+// DELETE endpoint to remove a recipe
+export async function DELETE(request, { params }) {
+  try {
+    const { id } = params;
+    
+    if (!id) {
+      return Response.json(
+        { error: 'Recipe ID is required' },
+        { status: 400 }
+      );
+    }
+    
+    // Add validation to ensure ID is a number
+    const numericId = Number(id);
+    if (isNaN(numericId)) {
+      return Response.json(
+        { error: `Invalid recipe ID: ${id}. ID must be a number.` },
+        { status: 400 }
+      );
+    }
+    
+    // Ensure we have Supabase database access
+    ensureSupabaseAccess();
+    
+    // Try to delete the recipe
+    await deleteRecipe(numericId);
+    
+    return Response.json(
+      { message: `Recipe with ID: ${id} has been deleted` }
+    );
+  } catch (error) {
+    console.error(`Error deleting recipe with ID: ${params?.id}`, error);
+    return handleDatabaseError(error);
+  }
+}
+
+// Handle OPTIONS requests for CORS
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,PUT,DELETE,OPTIONS',
+      'Access-Control-Allow-Headers': 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version',
+    },
+  });
 }

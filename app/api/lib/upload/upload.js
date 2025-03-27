@@ -1,5 +1,5 @@
 import multer from 'multer';
-import { NextResponse } from 'next/server';
+
 import path from 'path';
 import fs from 'fs';
 
@@ -44,12 +44,12 @@ export const upload = multer({
 // Helper function to handle multer errors
 export function handleUploadError(err) {
   if (err instanceof multer.MulterError) {
-    return NextResponse.json({ 
+    return Response.json({ 
       message: 'File upload error', 
       error: err.message 
     }, { status: 400 });
   } else if (err) {
-    return NextResponse.json({ 
+    return Response.json({ 
       message: 'Server error during upload', 
       error: err.message 
     }, { status: 500 });

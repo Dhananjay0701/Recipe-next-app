@@ -20,7 +20,7 @@ export async function extractIngredientsFromRecipe(recipeText) {
       "meta/meta-llama-3-8b-instruct", // Using LLaMA 3 model
       {
         input: {
-          prompt: `Extract all ingredients from this recipe: ${recipeText}. Return only a JSON array of ingredients with no additional text. Each ingredient should be an object with a 'name' property and 'checked' set to false.`,
+          prompt: `Extract all ingredients from this recipe: ${recipeText}. Return only a JSON array of ingredients and the quantity with no additional text. Each ingredient should be an object with a 'name' property and 'checked' set to false.`,
           temperature: 0.3,
           max_length: 1000
         }

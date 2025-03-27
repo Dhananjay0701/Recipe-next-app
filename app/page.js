@@ -15,7 +15,9 @@ export default function Home() {
   useEffect(() => {
     const getRecipes = async () => {
       try {
-        const data = await fetchRecipes();
+        // Add timestamp to avoid caching
+        const timestamp = Date.now();
+        const data = await fetchRecipes(timestamp);
         setRecipes(data);
         setLoading(false);
       } catch (error) {
@@ -33,9 +35,7 @@ export default function Home() {
     
     window.addEventListener('recipe-updated', handleRecipeUpdate);
     
-    // Add event listener for the Add Recipe button
-  
-    
+    // Clean up event listener
     return () => {
       window.removeEventListener('recipe-updated', handleRecipeUpdate);
     };
@@ -44,7 +44,8 @@ export default function Home() {
   const handleAddRecipe = async () => {
     // Refresh recipes after adding a new one
     try {
-      const data = await fetchRecipes();
+      const timestamp = Date.now();
+      const data = await fetchRecipes(timestamp);
       setRecipes(data);
     } catch (error) {
       console.error('Error fetching recipes:', error);

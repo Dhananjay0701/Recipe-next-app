@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import { getRecipes, saveRecipes } from '../../../../../_utils/recipe';
+import { getRecipes, saveRecipe, updateRecipe } from '../../../../../_utils/recipe';
 import { S3Client, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 
 // Initialize R2 client
@@ -39,7 +38,7 @@ export async function GET(request, { params }) {
     const buffer = Buffer.concat(chunks);
 
     // Create a response with the image data and correct Content-Type
-    return new NextResponse(buffer, {
+    return new Response(buffer, {
       headers: {
         'Content-Type': response.ContentType || 'image/jpeg',
         'Cache-Control': 'public, max-age=31536000, immutable', // Cache for 1 year
@@ -47,7 +46,7 @@ export async function GET(request, { params }) {
     });
   } catch (error) {
     console.error('Error fetching image from R2:', error);
-    return NextResponse.json(
+    return Response.json(
       { message: 'Error fetching image', error: error.message },
       { status: 500 }
     );
@@ -58,11 +57,14 @@ export async function GET(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const { id, filename } = params;
-    const recipes = getRecipes();
+    
+    // Getting recipes is an async operation
+    const recipes = await getRecipes();
+    
     const recipeIndex = recipes.findIndex(r => String(r.id) === String(id));
     
     if (recipeIndex === -1) {
-      return NextResponse.json(
+      return Response.json(
         { message: 'Recipe not found' },
         { status: 404 }
       );
@@ -70,37 +72,43 @@ export async function DELETE(request, { params }) {
     
     const decodedFilename = decodeURIComponent(filename);
     
-    // Remove the photo from the recipe
-    if (recipes[recipeIndex].photos) {
-      const photoIndex = recipes[recipeIndex].photos.indexOf(decodedFilename);
-      if (photoIndex !== -1) {
-        recipes[recipeIndex].photos.splice(photoIndex, 1);
+    // Find the photo that ENDS WITH the decoded filename instead of exact match
+    const photoToRemove = recipes[recipeIndex].photos.find(photo => 
+      photo.endsWith(decodedFilename)
+    );
+    if (photoToRemove) {
+      const photoIndex = recipes[recipeIndex].photos.indexOf(photoToRemove);
+      recipes[recipeIndex].photos.splice(photoIndex, 1);
+      
+      // Delete the file from R2
+      try {
+        // The Key should be the full path including recipe-photos/id/filename
+        const objectKey = `recipe-photos/${id}/${decodedFilename.split('/').pop()}`;
         
-        // Delete the file from R2
-        try {
-          const deleteCommand = new DeleteObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: decodedFilename,
-          });
-          
-          await R2.send(deleteCommand);
-        } catch (err) {
-          console.error('Error deleting photo from R2:', err);
-          // Continue even if file deletion fails
-        }
+        const deleteCommand = new DeleteObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: objectKey,
+        });
         
-        saveRecipes(recipes);
-        return NextResponse.json({ message: 'Photo deleted successfully' });
+        await R2.send(deleteCommand);
+      } catch (err) {
+        console.error('Error deleting photo from R2:', err);
+        // Continue even if file deletion fails
       }
+      
+      // Update the recipe in the database
+      await updateRecipe(id, { photos: recipes[recipeIndex].photos });
+      
+      return Response.json({ message: 'Photo deleted successfully' });
     }
     
-    return NextResponse.json(
+    return Response.json(
       { message: 'Photo not found' },
       { status: 404 }
     );
   } catch (error) {
     console.error('Error deleting photo:', error);
-    return NextResponse.json(
+    return Response.json(
       { message: 'Error deleting photo', error: error.toString() },
       { status: 500 }
     );

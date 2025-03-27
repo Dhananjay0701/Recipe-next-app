@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
-import { getRecipes, saveRecipes } from '../../../../_utils/recipe';
+import { getRecipeById, updateRecipe } from '../../../../_utils/recipe';
+import { isSupabaseConfigured } from '../../../../_utils/config';
+import { supabase } from '../../../../_utils/supabase';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 
 // Initialize R2 client
@@ -14,53 +15,118 @@ const R2 = new S3Client({
 
 const BUCKET_NAME = process.env.R2_BUCKET_NAME;
 
+// Handler for database connection errors
+const handleDatabaseError = (error) => {
+  console.error('Database connection error:', error);
+  return new Response(
+    JSON.stringify({ 
+      error: 'Database connection error', 
+      message: 'Could not connect to Supabase database',
+      details: error.message
+    }),
+    { 
+      status: 503,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+};
+
+// Ensure we're running with Supabase access
+const ensureSupabaseAccess = () => {
+  if (!isSupabaseConfigured()) {
+    const error = new Error('Supabase configuration required. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.');
+    throw error;
+  }
+};
+
 // GET endpoint to get all photos for a recipe
 export async function GET(request, { params }) {
   try {
     const recipeId = params.id;
-    const recipes = getRecipes();
-    const recipe = recipes.find(r => String(r.id) === String(recipeId));
+    
+    ensureSupabaseAccess();
+    
+    // Get recipe from Supabase
+    const recipe = await getRecipeById(recipeId);
     
     if (!recipe) {
-      return NextResponse.json(
-        { message: 'Recipe not found' },
-        { status: 404 }
+      return new Response(
+        JSON.stringify({ message: 'Recipe not found' }),
+        { 
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
       );
     }
     
     const photosList = recipe.photos || [];
-    return NextResponse.json({ photos: photosList });
+    return new Response(
+      JSON.stringify({ photos: photosList }),
+      { 
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
   } catch (error) {
     console.error('Error fetching photos:', error);
-    return NextResponse.json(
-      { message: 'Error fetching photos', error: error.toString() },
-      { status: 500 }
-    );
+    return handleDatabaseError(error);
   }
 }
 
 // POST endpoint to add a photo to a recipe
 export async function POST(request, { params }) {
+  // Immediately create a response to acknowledge receipt of the upload
+  // This allows the upload to continue in the background after the response
+  const responseStream = new TransformStream();
+  const writer = responseStream.writable.getWriter();
+  
+  // Start the background processing
+  processPhotoUpload(request, params, writer).catch(error => {
+    console.error('Uncaught error in photo upload:', error);
+  });
+  
+  // Return the stream response immediately, allowing the upload to continue
+  return new Response(responseStream.readable);
+}
+
+// Background processing function that continues even if client disconnects
+async function processPhotoUpload(request, params, writer) {
   try {
     const recipeId = params.id;
     const formData = await request.formData();
     const photoFile = formData.get('photo');
     
     if (!photoFile) {
-      return NextResponse.json(
-        { message: 'No photo uploaded', error: 'No file received' },
-        { status: 400 }
+      writer.write(
+        new TextEncoder().encode(JSON.stringify({ 
+          message: 'No photo uploaded', 
+          error: 'No file received' 
+        }))
       );
+      writer.close();
+      return;
     }
     
-    const recipes = getRecipes();
-    const recipeIndex = recipes.findIndex(r => String(r.id) === String(recipeId));
+    ensureSupabaseAccess();
     
-    if (recipeIndex === -1) {
-      return NextResponse.json(
-        { message: 'Recipe not found', error: `Recipe with ID ${recipeId} not found` },
-        { status: 404 }
+    // Get recipe from Supabase
+    const recipe = await getRecipeById(recipeId);
+    
+    if (!recipe) {
+      writer.write(
+        new TextEncoder().encode(JSON.stringify({ 
+          message: 'Recipe not found', 
+          error: `Recipe with ID ${recipeId} not found` 
+        }))
       );
+      writer.close();
+      return;
     }
     
     // Handle the file upload to R2
@@ -85,23 +151,45 @@ export async function POST(request, { params }) {
     const r2Path = `recipe-photos/${recipeId}/${filename}`;
     
     // Initialize photos array if it doesn't exist
-    if (!recipes[recipeIndex].photos) {
-      recipes[recipeIndex].photos = [];
-    }
+    const photos = recipe.photos || [];
     
     // Add the new photo to the recipe
-    recipes[recipeIndex].photos.push(r2Path);
-    saveRecipes(recipes);
+    photos.push(r2Path);
+    console.log('Updating recipe with new photo path:', r2Path);
+    console.log('Total photos after adding:', photos.length);
     
-    return NextResponse.json(
-      { message: 'Photo added successfully', photoPath: r2Path },
-      { status: 201 }
-    );
+    // Update the recipe in Supabase with the new photos array
+    try {
+      await updateRecipe(recipeId, { photos });
+      console.log('Recipe updated successfully with new photos');
+      
+      // Send the success response with the photo path
+      writer.write(
+        new TextEncoder().encode(JSON.stringify({ 
+          message: 'Photo added successfully', 
+          photoPath: r2Path 
+        }))
+      );
+      writer.close();
+    } catch (updateError) {
+      console.error('Error updating recipe with new photo:', updateError);
+      writer.write(
+        new TextEncoder().encode(JSON.stringify({ 
+          message: 'Error updating recipe with photo', 
+          error: updateError.toString() 
+        }))
+      );
+      writer.close();
+    }
   } catch (error) {
     console.error('Error adding photo:', error);
-    return NextResponse.json(
-      { message: 'Error adding photo', error: error.toString(), details: error.message },
-      { status: 500 }
+    writer.write(
+      new TextEncoder().encode(JSON.stringify({ 
+        error: 'Database connection error', 
+        message: 'Could not connect to Supabase database',
+        details: error.message
+      }))
     );
+    writer.close();
   }
 }
