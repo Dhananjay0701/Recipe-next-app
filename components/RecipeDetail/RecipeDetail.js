@@ -88,54 +88,6 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
         }
     }, [recipe?.id, recipeId]);
 
-    // Check for any pending uploads from localStorage
-    const checkPendingUploads = useCallback(() => {
-        if (!recipe?.id) return;
-        
-        // Look for uploads related to this recipe
-        const keys = Object.keys(localStorage).filter(key => 
-            key.startsWith('recipe_upload_') && 
-            key.includes('temp-')
-        );
-        
-        // Process each pending upload
-        keys.forEach(key => {
-            try {
-                const uploadInfo = JSON.parse(localStorage.getItem(key));
-                
-                // Only process uploads for this recipe
-                if (uploadInfo.recipeId !== recipe.id) return;
-                
-                const tempPhotoId = uploadInfo.tempPhotoId;
-                
-                // Check if this upload is already in our photos array
-                const photoExists = photos.some(p => p === tempPhotoId || p === uploadInfo.photoPath);
-                
-                if (!photoExists) {
-                    // If completed, add the final path
-                    if (uploadInfo.status === 'completed' && uploadInfo.photoPath) {
-                        setPhotos(prevPhotos => [...prevPhotos, uploadInfo.photoPath]);
-                        localStorage.removeItem(key); // Clean up
-                    }
-                    // If still uploading or errored but we have a local preview, show it
-                    else if (uploadInfo.status === 'uploading' || uploadInfo.status === 'error') {
-                        // We don't have the image data anymore as we navigated away
-                        // Just clean up and let the next refresh fetch the server data
-                        localStorage.removeItem(key);
-                    }
-                }
-            } catch (error) {
-                console.error('Error parsing upload info:', error);
-                localStorage.removeItem(key); // Clean up invalid data
-            }
-        });
-    }, [recipe?.id, photos]);
-    
-    // Check for pending uploads when component mounts or recipe changes
-    useEffect(() => {
-        checkPendingUploads();
-    }, [recipe?.id, checkPendingUploads]);
-
     // Initialize data from props or fetch it - only run once
     useEffect(() => {
         if (initialRecipe) {
@@ -494,23 +446,13 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
             const formData = new FormData();
             formData.append('photo', file);
             
-            // Store the upload info in localStorage to track it across page navigations
-            const uploadInfo = {
-                tempPhotoId,
-                recipeId: recipe.id,
-                timestamp: Date.now(),
-                filename: file.name,
-                status: 'uploading'
-            };
-            localStorage.setItem(`recipe_upload_${tempPhotoId}`, JSON.stringify(uploadInfo));
-            
-            // Use keepalive flag to ensure the request continues even if page is unloaded
+            // Modified fetch configuration for better serverless compatibility
             fetch(`${API_URL}/recipes/${recipe.id}/photos`, {
                 method: 'POST',
                 body: formData,
-                keepalive: true, // This is the key flag that allows the request to continue
-                // Set a longer timeout than default
-                signal: AbortSignal.timeout(120000) // 2 minute timeout
+                // Removed keepalive flag that may cause issues in serverless environments
+                signal: AbortSignal.timeout(60000) // Reduced timeout to 1 minute
+                // Don't set Content-Type header - browser will set it with correct boundary for FormData
             })
                 .then(async (response) => {
                     const responseClone = response.clone();
@@ -521,19 +463,17 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
                         }
                         return data;
                     } catch (jsonError) {
-                        const textError = await responseClone.text();
-                        throw new Error(textError || 'Failed to upload photo');
+                        // Try to get more detailed error information
+                        try {
+                            const textError = await responseClone.text();
+                            throw new Error(textError || 'Failed to upload photo');
+                        } catch (e) {
+                            throw new Error('Failed to upload photo: server error');
+                        }
                     }
                 })
                 .then(data => {
                     console.log('Photo uploaded successfully:', data.photoPath);
-                    
-                    // Update the localStorage info to mark this upload as completed
-                    localStorage.setItem(`recipe_upload_${tempPhotoId}`, JSON.stringify({
-                        ...uploadInfo,
-                        status: 'completed',
-                        photoPath: data.photoPath
-                    }));
                     
                     // Replace the temp photo with the real one
                     setPhotos(prevPhotos => 
@@ -553,13 +493,6 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
                 })
                 .catch(error => {
                     console.error('Error uploading photo:', error);
-                    
-                    // Update localStorage with the error
-                    localStorage.setItem(`recipe_upload_${tempPhotoId}`, JSON.stringify({
-                        ...uploadInfo,
-                        status: 'error',
-                        error: error.message
-                    }));
                     
                     // Just remove the loading indicator
                     setUploadingPhotos(prev => {

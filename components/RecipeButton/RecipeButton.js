@@ -36,7 +36,7 @@ const RecipeButton = ({ images }) => {
             <div className="hover-all">
               <div className="hover-text">{String(image.name).charAt(0).toUpperCase() + String(image.name).slice(1)}</div>
               <div className="hover-image"></div>
-              <div className="hover-date">{image.date}</div>
+              <div className="hover-date">{new Date(image.date).toLocaleString('default', { month: 'short', year: 'numeric' })}</div>
               <div className="hover-rating"><StarRating rating={image.rating}/></div>
             </div>
           )}
