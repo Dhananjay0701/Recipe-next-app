@@ -1,6 +1,25 @@
 import React from 'react';
 import Link from 'next/link';
 import { fetchRecipeById } from '../../_utils/config';
+import { getR2Url } from '../../_utils/r2';
+
+// Helper function to get the image URL based on its path
+function getImageUrl(imagePath) {
+  if (!imagePath) return '';
+  
+  // If the image path is already a full URL, use it as is
+  if (imagePath.startsWith('http')) {
+    return imagePath;
+  }
+  
+  // If the image path starts with 'static/', it's an R2 path
+  if (imagePath.startsWith('static/')) {
+    return getR2Url(imagePath);
+  }
+  
+  // Otherwise, assume it's a local static file
+  return `/static/${imagePath}`;
+}
 
 export default async function RecipeDetailPage({ params }) {
   const { id } = params;
@@ -62,7 +81,7 @@ export default async function RecipeDetailPage({ params }) {
           {imagePath && (
             <div className="md:w-1/3">
               <img 
-                src={`/static/${imagePath}`} 
+                src={getImageUrl(imagePath)} 
                 alt={name} 
                 className="w-full h-full object-cover"
               />

@@ -46,30 +46,43 @@ export async function saveRecipe(recipe) {
     photos: recipe.photos
   };
   
-  const { data, error } = await supabase
-    .from('recipes')
-    .insert([supabaseRecipe])
-    .select();
-  
-  if (error) {
-    console.error('Error saving recipe:', error);
-    throw error;
+  try {
+    console.log('Attempting to save recipe to Supabase, recipe ID:', recipe.id);
+    console.log('Supabase URL configured:', !!process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log('Supabase Key configured:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    
+    const { data, error } = await supabase
+      .from('recipes')
+      .insert([supabaseRecipe])
+      .select();
+    
+    if (error) {
+      console.error('Error saving recipe:', error);
+      console.error('Error details:', JSON.stringify(error));
+      throw error;
+    }
+    
+    console.log('Recipe saved successfully, data:', data);
+    
+    // Convert the returned Supabase data back to the application format
+    const savedRecipe = {
+      id: data[0].id,
+      Name: data[0].name,
+      Image_path: data[0].image_path,
+      date: data[0].date,
+      Rating: data[0].rating,
+      recipeText: data[0].recipe_text,
+      ingredients: data[0].ingredients,
+      links: data[0].links,
+      photos: data[0].photos
+    };
+    
+    return savedRecipe;
+  } catch (err) {
+    console.error('Unexpected error in saveRecipe:', err);
+    console.error('Stack trace:', err.stack);
+    throw err;
   }
-  
-  // Convert the returned Supabase data back to the application format
-  const savedRecipe = {
-    id: data[0].id,
-    Name: data[0].name,
-    Image_path: data[0].image_path,
-    date: data[0].date,
-    Rating: data[0].rating,
-    recipeText: data[0].recipe_text,
-    ingredients: data[0].ingredients,
-    links: data[0].links,
-    photos: data[0].photos
-  };
-  
-  return savedRecipe;
 }
 
 // Update an existing recipe in Supabase

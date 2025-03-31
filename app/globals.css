@@ -12,6 +12,7 @@
   --border-color: rgba(255, 255, 255, 0.3);
   --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   --content-width: 57%;
+  --content-max-width: 1100px;
 }
 
 /* Global styles for the entire app */
@@ -26,6 +27,7 @@ html, body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
+  font-size: 16px;
 }
 
 #root, main {
@@ -78,22 +80,22 @@ html, body {
   color: var(--text-light);
   font-size: 18px;
   font-weight: bold;
-  background-color: rgba(0, 0, 0, 0.01); /* Semi-transparent overlay */
+  background-color: rgba(0, 0, 0, 0.01);
   background-blend-mode: overlay;
   cursor: pointer;
-  /* background-image: url('./static/spaget.JPG') */;
 }
 
 .Big-button:hover{
-  background-color: rgba(0, 0, 0, 0.6) /* Apply the opacity when hovering */
+  background-color: rgba(0, 0, 0, 0.6)
 }
 
 .recipe-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 15px;
   margin: 20px auto;
-  max-width: var(--content-width);
+  width: var(--content-width);
+  max-width: var(--content-max-width);
 }
 
 /* Top Navigation Bar */
@@ -103,17 +105,26 @@ html, body {
   height: 75px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 40px;
+  justify-content: center;
+  padding: 0;
   box-sizing: border-box;
   margin-top: 0;
+}
+
+/* Top bar inner container to maintain content width */
+.Top-bar-inner {
+  display: flex;
+  width: var(--content-width);
+  max-width: var(--content-max-width);
+  justify-content: space-between;
+  height: 100%;
+  align-items: center;
 }
 
 /* Logo section */
 .Logo-section {
   display: flex;
   align-items: center;
-  margin-left: 275px;
 }
 
 .Logo-tag {
@@ -121,7 +132,7 @@ html, body {
   height: 100px;
   background: transparent;
   border: none;
-  background-size: cover;  /* ensures image fills the container */
+  background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   cursor: pointer;
@@ -138,7 +149,7 @@ html, body {
   cursor: pointer;
 }
 
-/* New center-section wrapping search bar and nav-links */
+/* Center-section wrapping search bar and nav-links */
 .Center-section {
   display: flex;
   align-items: center;
@@ -146,9 +157,8 @@ html, body {
 
 /* Search bar */
 .search {
-  flex: 1;
-  max-width: 190px; /* Keep the width the same */
-  margin: 0 0 0 -10px; /* Shift 5px to the left */
+  max-width: 190px;
+  margin: 0 0 0 -10px;
 }
 
 .Search-input {
@@ -175,7 +185,7 @@ html, body {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 0; /* no gap between search end and nav-links start */
+  gap: 0;
   margin-left: 30px;
 }
 
@@ -207,7 +217,7 @@ html, body {
   font-weight: bold;
   cursor: pointer;
   background-color: var(--accent-green);
-  color: var(--text-light);  /* slight separation from other nav buttons */
+  color: var(--text-light);
 }
 
 .Add-recipe:hover {
@@ -226,7 +236,6 @@ html, body {
 .User-section {
   display: flex;
   align-items: center;
-  margin-right: 300px;
 }
 
 .User-acc {
@@ -249,32 +258,32 @@ html, body {
   font-size: 18px;
 }
 
-.Banner-text{
+.Banner-text {
   font-family: "Yrsa", serif;
   font-weight: 400;
-  position:absolute;
+  position: relative;
   display: flex;
   font-size: 28px;
-  margin-top: 200px;
-  width: 57%;
-  height: 40px;
-  margin-left:320px;
+  margin: 200px auto 0;
+  width: var(--content-width);
+  max-width: var(--content-max-width);
+  height: auto;
   align-items: center;
   justify-content: center;
   color: #a4abb2;
 }
 
-
-
-.BannerImg{
-  position:absolute;
+.BannerImg {
+  position: relative;
   display: flex;
   font-size: 28px;
-  margin-top: 40px;
-  width: 57%;
+  margin: 40px auto 0;
+  width: var(--content-width);
+  max-width: var(--content-max-width);
   height: 140px;
-  margin-left:320px;
   background-image: url('/static/yir-banner-1900-o.png');
+  background-size: cover;
+  background-position: center;
   align-items: center;
   justify-content: center;
   color: #a4abb2;
@@ -288,28 +297,28 @@ span.Bt-span{
 }
 
 .Big-button:hover .hover-text {
-  font-size: calc(1.5rem - 0.2vw); /* Adjust font size dynamically on hover */
-  max-height: 2.4em; /* Still ensure it fits in two lines */
-  overflow: hidden; /* Prevent spillover */
+  font-size: calc(1.5rem - 0.2vw);
+  max-height: 2.4em;
+  overflow: hidden;
 }
 
 .Big-button .hover-text {
   position: absolute;
-  bottom: 25px; /* Place text near the bottom */
-  left: 10px; /* Add a small offset */
-  right: 10px; /* Add a small offset */
-  font-size: calc(1rem); /* Default font size */
-  line-height: 1.2; /* Line height for readability */
-  text-align: center; /* Center align the text */
+  bottom: 25px;
+  left: 10px;
+  right: 10px;
+  font-size: calc(1rem);
+  line-height: 1.2;
+  text-align: center;
   color: var(--text-light);
-  background: transparent; /* Background for better contrast */
-  padding: 5px 10px; /* Padding for spacing */
-  border-radius: 4px; /* Rounded corners */
-  max-height: 2.4em; /* Maximum height for two lines of text */
-  overflow: hidden; /* Hide overflowing text */
-  text-overflow: ellipsis; /* Add "..." for overflow */
-  white-space: nowrap; /* Ensure text fits on one or two lines */
-  z-index: 2; /* Ensure visibility over background */
+  background: transparent;
+  padding: 5px 10px;
+  border-radius: 4px;
+  max-height: 2.4em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  z-index: 2;
 }
 .Big-button .hover-image{
   position: absolute;
@@ -319,13 +328,12 @@ span.Bt-span{
   text-align: left;
   height: 150px;
   width: 150px;
-  top:-10px; /* Place text near the bottom */
-  left: 50%; /* Start positioning from the center horizontally */
-  transform: translateX(-50%); /* Adjust back by 50% of its own width */
+  top:-10px;
+  left: 50%;
+  transform: translateX(-50%);
   background-image: url('/static/calendar_gpt_final.png');
   padding-left: 8px;
   padding-top: 15px;
-
   background-size: cover;
 }
 .Big-button .hover-date {
@@ -337,7 +345,7 @@ span.Bt-span{
   display: flex;
   text-align: center;
   top: 54px;
-  left: 52%; /* Start positioning from the center horizontally */
+  left: 52%;
   transform: translateX(-50%); 
   color: rgb(18, 17, 20);
   font-size : 16px;
@@ -347,7 +355,7 @@ span.Bt-span{
   width: 150px;
   left: 55%;
   position: absolute;
-  top: 52%; /* Start positioning from the center horizontally */
+  top: 52%;
   transform: translateY(-50%); 
   transform: translateX(-50%); 
   display: flex;
@@ -360,6 +368,7 @@ span.Bt-span{
   align-items: flex-end;
   justify-content: center;
   width: var(--content-width);
+  max-width: var(--content-max-width);
   margin: 250px auto 0;
 }
 
@@ -368,14 +377,14 @@ span.Bt-span{
   border: 0;
   border-top: 1px solid #445566;
   width: 100%;
-  margin: 5px 0 0 0; /* Reduced top margin */
+  margin: 5px 0 0 0;
 }
 .hr-2{
   color: #445566;
   border: 0;
   border-top: 1px solid #445566;
   width: 100%;
-  margin: 0 0 5px 0; /* Reduced bottom margin */
+  margin: 0 0 5px 0;
 }
 .filters {
   display: flex;
@@ -469,4 +478,79 @@ button {
 /* Show dropdown on hover */
 .dropdown:hover .dropdown-content {
   display: block;
+}
+
+/* Add responsive media queries while maintaining 57% width on larger screens */
+@media (max-width: 1200px) {
+  .recipe-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  :root {
+    --content-width: 75%;
+  }
+  
+  .recipe-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  
+  .Banner-text {
+    margin-top: 150px;
+    font-size: 24px;
+  }
+  
+  .container {
+    margin-top: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --content-width: 85%;
+  }
+  
+  .Top-bar {
+    height: auto;
+    min-height: 75px;
+  }
+  
+  .Top-bar-inner {
+    flex-direction: column;
+    padding: 10px 0;
+  }
+  
+  .Logo-section, .Center-section, .User-section {
+    margin: 5px 0;
+  }
+  
+  .recipe-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+  
+  .Banner-text {
+    margin-top: 120px;
+    font-size: 22px;
+  }
+  
+  .container {
+    margin-top: 150px;
+    align-items: center;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --content-width: 90%;
+  }
+  
+  .recipe-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+  
+  .filters {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }

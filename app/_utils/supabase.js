@@ -4,8 +4,41 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// Create Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+console.log('Supabase configuration status:');
+console.log('- URL configured:', !!supabaseUrl);
+console.log('- Key configured:', !!supabaseAnonKey);
+
+// Create Supabase client with error handling
+let supabase;
+try {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Supabase environment variables missing. Please check your environment configuration.');
+    // Creating a placeholder client that will throw clear errors when used
+    supabase = {
+      from: () => {
+        throw new Error('Supabase client not properly initialized. Check environment variables.');
+      }
+    };
+  } else {
+    // Create the real client
+    supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false // This can help with serverless environments
+      }
+    });
+    console.log('Supabase client initialized successfully');
+  }
+} catch (err) {
+  console.error('Error initializing Supabase client:', err);
+  // Fallback to a placeholder client
+  supabase = {
+    from: () => {
+      throw new Error(`Failed to initialize Supabase client: ${err.message}`);
+    }
+  };
+}
+
+export { supabase };
 
 // Helper function to check if Supabase is properly configured
 export function isSupabaseConfigured() {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import StarRating from '../StarRating/StarRating';
 import './RecipeDetail.css';
 import API_URL from '../../app/_utils/config';
+import { getR2Url } from '../../app/_utils/r2';
 
 const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
     const router = useRouter();
@@ -628,14 +629,16 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
 
     // Helper function to get the correct image URL
     const getImageUrl = (path) => {
+        if (!path) return '/static/placeholder-image.jpg';
+        
         // Check if this is a temp path from optimistic UI update
-        if (path && path.startsWith('temp-')) {
+        if (path.startsWith('temp-')) {
             // Use the temporary URL from our tempUrlsRef
             return tempUrlsRef.current[path] || '/static/placeholder-image.jpg';
         }
             
         // If it's a recipe-photos path (R2 storage), use the API endpoint
-        if (path && path.startsWith('recipe-photos/')) {
+        if (path.startsWith('recipe-photos/')) {
             // Extract the path components
             const pathParts = path.split('/');
             // The format is 'recipe-photos/recipeId/filename'
@@ -644,6 +647,12 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
                 return `${API_URL}/recipes/${pathParts[1]}/photos/${encodeURIComponent(pathParts[2])}`;
             }
         }
+        
+        // If the path starts with 'static/' (new R2 format), use R2 URL
+        if (path.startsWith('static/')) {
+            return getR2Url(path);
+        }
+        
         // Otherwise use the static path (for existing local images)
         return `/static/${path}`;
     };
@@ -671,10 +680,10 @@ const RecipeDetail = ({ recipe: initialRecipe, recipeId }) => {
             
             <div className="recipe-content">
                 <div className="recipe-image">
-                    {recipe.image_path && (
+                    {(recipe.image_path || recipe.Image_path) && (
                         <img 
-                            src={getImageUrl(recipe.image_path)} 
-                            alt={recipe.name || 'Recipe image'} 
+                            src={getImageUrl(recipe.image_path || recipe.Image_path)} 
+                            alt={recipe.name || recipe.Name || 'Recipe image'} 
                         />
                     )}
                     

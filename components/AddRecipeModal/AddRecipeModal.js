@@ -16,6 +16,7 @@ const AddRecipeModal = ({ onClose, onAddRecipe }) => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -64,6 +65,7 @@ const AddRecipeModal = ({ onClose, onAddRecipe }) => {
 
     setIsSubmitting(true);
     setError("");
+    setUploadProgress(10); // Show initial progress
 
     try {
       console.log("Uploading file:", recipeImage.name, recipeImage.type, recipeImage.size);
@@ -79,10 +81,15 @@ const AddRecipeModal = ({ onClose, onAddRecipe }) => {
         console.log(pair[0], pair[1]);
       }
 
+      setUploadProgress(30); // Show progress during request preparation
+
+      // Use fetch with custom logic to track upload progress if available
       const response = await fetch("/api/recipes", {
         method: "POST",
         body: formData,
       });
+
+      setUploadProgress(90); // Almost done
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -90,12 +97,15 @@ const AddRecipeModal = ({ onClose, onAddRecipe }) => {
         throw new Error(`Server error: ${response.status} ${errorData.message || ""}`);
       }
 
+      setUploadProgress(100); // Complete
+
       // On success, refresh recipes and close the modal
       onAddRecipe();
       onClose();
     } catch (err) {
       console.error("Upload error:", err);
       setError(err.message);
+      setUploadProgress(0); // Reset progress on error
     } finally {
       setIsSubmitting(false);
     }
@@ -110,6 +120,18 @@ const AddRecipeModal = ({ onClose, onAddRecipe }) => {
         <h2>Add New Recipe</h2>
 
         {error && <div className="error-message">{error}</div>}
+
+        {uploadProgress > 0 && (
+          <div className="upload-progress">
+            <div className="progress-bar">
+              <div 
+                className="progress-fill" 
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+            <div className="progress-text">{uploadProgress}%</div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">

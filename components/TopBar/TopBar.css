@@ -1,21 +1,32 @@
 /* Top Navigation Bar */
 .Top-bar {
-  background-color: rgb(20, 24, 28);
+  background-color: var(--topbar-bg);
   width: 100%;
   height: 75px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 40px;
+  justify-content: center;
+  padding: 0 15px;
   box-sizing: border-box;
   margin-top: 0;
+}
+
+/* Top bar inner container to maintain content width */
+.Top-bar-inner {
+  display: flex;
+  width: 100%;
+  max-width: var(--content-max-width);
+  justify-content: space-between;
+  height: 100%;
+  align-items: center;
+  padding: 0 5px;
+  box-sizing: border-box;
 }
 
 /* Logo section */
 .Logo-section {
   display: flex;
   align-items: center;
-  margin-left: 275px;
 }
 
 .Logo-tag {
@@ -34,21 +45,23 @@
   font-family: Georgia, serif;
   font-size: 24px;
   font-weight: bold;
-  color: white;
+  color: var(--text-light);
   border: none;
   background: transparent;
   cursor: pointer;
+  margin-right: 10px;
 }
 
-/* New center-section wrapping search bar and nav-links */
+/* Center-section wrapping search bar and nav-links */
 .Center-section {
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
+  justify-content: center;
 }
 
 /* Search bar */
 .search {
-  flex: 1;
   max-width: 190px;
   margin: 0 0 0 -10px;
 }
@@ -56,16 +69,17 @@
 .Search-input {
   height: 8px;
   background-color: rgba(34, 38, 42, 0.8);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: var(--text-light);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   outline: none;
   font-size: 14px;
   transition: border-color 0.3s ease;
+  padding: 14px 10px;
 }
 
 .Search-input::placeholder {
-  color: #99AABB;
+  color: var(--text-muted);
 }
 
 .Search-input:focus {
@@ -77,29 +91,38 @@
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 15px;
   margin-left: 30px;
 }
 
-.All-recipes, .Dairy {
-  padding-left: 0 10px;
+.All-recipes{
   font-weight: bold;
   border: none;
   background: transparent;
-  color: #99AABB;
+  color: var(--text-muted);
   font-size: 13px;
   cursor: pointer;
-  padding: 0 5px;
+  margin-left: 10px;
+}
+
+.Dairy {
+  font-weight: bold;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  margin-left: -10px;
 }
 
 .All-recipes:hover, .Dairy:hover {
-  color: white;
+  color: var(--text-light);
 }
 
 /* Add recipe button */
 .Add-recipe {
-  margin-left: 10px;
-  height: 25px;
+  height: 28px;
+  margin-left: -5px;
   border: none;
   border-radius: 4px;
   display: flex;
@@ -108,19 +131,19 @@
   font-size: 12px;
   font-weight: bold;
   cursor: pointer;
-  background-color: #00ac1c;
-  color: white;
+  background-color: var(--accent-green);
+  color: var(--text-light);
 }
 
 .Add-recipe:hover {
-  background-color: #00a01c;
+  background-color: var(--accent-hover);
 }
 
 .Add-p {
   font-size: 18px;
   font-weight: bold;
-  color: white;
-  margin: 0 5px 0 0;
+  color: var(--text-light);
+  margin: 0 8px 0 0;
   padding: 0;
 }
 
@@ -128,10 +151,10 @@
 .User-section {
   display: flex;
   align-items: center;
-  margin-right: 300px;
 }
 
 .User-acc {
+  margin-left: 20px;
   width: 40px;
   height: 60px;
   background: transparent;
@@ -146,7 +169,79 @@
 .User-text {
   font-weight: bold;
   border: 0;
-  color: #99AABB;
+  color: var(--text-muted);
   background: transparent;
   font-size: 18px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .Logo-name {
+    font-size: 22px;
+  }
+  
+  .Top-bar-inner {
+    padding: 0;
+  }
+}
+
+@media (max-width: 992px) {
+  .search {
+    max-width: 150px;
+  }
+  
+  .Logo-name {
+    font-size: 20px;
+  }
+  
+  .nav-links {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .Top-bar {
+    height: auto;
+    min-height: 75px;
+    padding: 0 10px;
+  }
+  
+  .Top-bar-inner {
+    flex-direction: column;
+    padding: 10px 0;
+  }
+  
+  .Logo-section, .Center-section, .User-section {
+    margin: 8px 0;
+    width: 100%;
+  }
+  
+  .Center-section {
+    justify-content: space-between;
+  }
+  
+  .nav-links {
+    margin-left: 15px;
+    gap: 10px;
+  }
+  
+  .search {
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .Logo-name {
+    font-size: 18px;
+  }
+  
+  .Center-section {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .nav-links {
+    margin-left: 0;
+    margin-top: 10px;
+  }
 }

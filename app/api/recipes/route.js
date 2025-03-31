@@ -1,6 +1,6 @@
-
 import { getRecipes, getRecipeById, saveRecipe, updateRecipe, deleteRecipe } from '../../_utils/recipe';
 import { isSupabaseConfigured } from '../../_utils/config';
+import { uploadToR2 } from '../../_utils/r2';
 import fs from 'fs';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
@@ -111,15 +111,13 @@ export async function POST(request) {
     const filename = Date.now() + '-' + Math.round(Math.random() * 1E9) + '.' + 
                    imageFile.name.split('.').pop();
     
-    const uploadDir = join(process.cwd(), 'public', 'static');
-    
-    // Ensure the directory exists
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    
-    const filePath = join(uploadDir, filename);
-    await writeFile(filePath, buffer);
+    // Upload to R2 instead of local filesystem
+    const r2Path = await uploadToR2(
+      buffer, 
+      filename, 
+      imageFile.type || 'image/jpeg', 
+      'static'
+    );
 
     // Format the date (e.g., "20 Jan 2024")
     const now = new Date();
@@ -131,7 +129,7 @@ export async function POST(request) {
     const newRecipe = {
       id: Date.now(), // Use timestamp as ID
       Name: name,
-      Image_path: filename,
+      Image_path: r2Path, // Store the R2 path instead of just the filename
       date: date,
       Rating: parseFloat(rating),
       recipeText: recipeText || '',

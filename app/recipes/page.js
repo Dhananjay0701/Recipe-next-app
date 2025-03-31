@@ -1,6 +1,25 @@
 import React from 'react';
 import Link from 'next/link';
 import { fetchRecipes } from '../_utils/config';
+import { getR2Url } from '../_utils/r2';
+
+// Function to get the correct image URL (R2 or static)
+function getImageUrl(imagePath) {
+  if (!imagePath) return '';
+  
+  // If the image path is already a full URL, use it as is
+  if (imagePath.startsWith('http')) {
+    return imagePath;
+  }
+  
+  // If the image path starts with 'static/', it's an R2 path
+  if (imagePath.startsWith('static/')) {
+    return getR2Url(imagePath);
+  }
+  
+  // Otherwise, assume it's a local static file
+  return `/static/${imagePath}`;
+}
 
 export default async function RecipesPage() {
   let recipes = [];
@@ -33,7 +52,7 @@ export default async function RecipesPage() {
               {(recipe.image_path || recipe.Image_path) && (
                 <div className="aspect-video relative mb-4">
                   <img 
-                    src={`/static/${recipe.image_path || recipe.Image_path}`} 
+                    src={getImageUrl(recipe.image_path || recipe.Image_path)}
                     alt={recipe.name || recipe.Name}
                     className="object-cover w-full h-full rounded"
                   />
