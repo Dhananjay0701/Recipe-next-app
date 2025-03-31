@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import './TopBar.css';
 import AddRecipeModal from '../AddRecipeModal/AddRecipeModal';
 
-const TopBar = () => {
+const TopBar = ({ onAddRecipe }) => {
   const [showModal, setShowModal] = useState(false);
   
   const handleAddRecipeClick = () => {
@@ -18,6 +18,16 @@ const TopBar = () => {
   
   const handleCloseModal = () => {
     setShowModal(false);
+  };
+  
+  const handleRecipeAdded = () => {
+    // Call the parent onAddRecipe callback if provided
+    if (onAddRecipe) {
+      onAddRecipe();
+    }
+    
+    // Also dispatch the event for backward compatibility
+    window.dispatchEvent(new Event('recipe-updated'));
   };
   
   return (
@@ -48,7 +58,12 @@ const TopBar = () => {
         <button className="User-text">DT</button>
       </div>
       
-      {showModal && <AddRecipeModal onClose={handleCloseModal} onAddRecipe={() => window.dispatchEvent(new Event('recipe-updated'))} />}
+      {showModal && (
+        <AddRecipeModal 
+          onClose={handleCloseModal} 
+          onAddRecipe={handleRecipeAdded} 
+        />
+      )}
     </div>
   );
 };
