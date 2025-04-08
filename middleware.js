@@ -43,7 +43,7 @@ export default clerkMiddleware(async (auth, request) => {
 
   // If you needed to combine with another middleware like next-intl:
   // return anotherMiddleware(request);
-});
+}, { debug: true });
 
 // Configure middleware to run on specific paths
 export const config = {
