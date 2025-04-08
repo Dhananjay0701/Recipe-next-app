@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth, SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
 import TopBar from '../components/TopBar/TopBar';
 import BannerText from '../components/BannerText/BannerText';
 import FilterBar from '../components/FilterBar/FilterBar';
@@ -9,6 +10,7 @@ import ErrorBoundary from '../components/ErrorBoundary/ErrorBoundary';
 import { fetchRecipes } from './_utils/config';
 
 export default function Home() {
+  const { isLoaded, userId } = useAuth();
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,7 +32,9 @@ export default function Home() {
   };
 
   useEffect(() => {
-    getRecipes();
+    if (userId) {
+      getRecipes();
+    }
     
     // Listen for recipe updates
     const handleRecipeUpdate = () => {
@@ -43,7 +47,7 @@ export default function Home() {
     return () => {
       window.removeEventListener('recipe-updated', handleRecipeUpdate);
     };
-  }, []);
+  }, [userId]);
   
   const handleAddRecipe = async () => {
     // Refresh recipes after adding a new one
@@ -60,25 +64,35 @@ export default function Home() {
     window.dispatchEvent(new CustomEvent('recipe-updated'));
   };
   
+  // Show loading state while Clerk loads
+  if (!isLoaded) {
+    return <div className="loading">Loading...</div>;
+  }
+  
   return (
     <ErrorBoundary>
-      <main>
-        <TopBar onAddRecipe={handleAddRecipe} />
-        <BannerText />
-        <FilterBar />
-        {loading && recipes.length === 0 ? (
-          <div className="loading">Loading recipes...</div>
-        ) : error ? (
-          <div className="error-message">{error}</div>
-        ) : recipes.length === 0 ? (
-          <div className="no-recipes">No recipes found. Add your first recipe!</div>
-        ) : (
-          <RecipeButton 
-            images={recipes} 
-            onRecipeDeleted={handleRecipeDeleted}
-          />
-        )}
-      </main>
+      <SignedIn>
+        <main>
+          <TopBar onAddRecipe={handleAddRecipe} />
+          <BannerText />
+          <FilterBar />
+          {loading && recipes.length === 0 ? (
+            <div className="loading">Loading recipes...</div>
+          ) : error ? (
+            <div className="error-message">{error}</div>
+          ) : recipes.length === 0 ? (
+            <div className="no-recipes">No recipes found. Add your first recipe!</div>
+          ) : (
+            <RecipeButton 
+              images={recipes} 
+              onRecipeDeleted={handleRecipeDeleted}
+            />
+          )}
+        </main>
+      </SignedIn>
+      <SignedOut>
+        <RedirectToSignIn />
+      </SignedOut>
     </ErrorBoundary>
   );
 }
