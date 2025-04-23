@@ -9,7 +9,7 @@ import { NextRequest } from 'next/server';
 const isApiRoute = createRouteMatcher(['/api/(.*)']);
 
 // Define allowed origins - both the .xyz and .vercel.app domains
-const allowedOrigins = ['https://broiscooked.xyz', 'https://broiscooked.vercel.app', 'http://localhost:3000'];
+const allowedOrigins = ['https://broiscooked.xyz', 'https://broiscooked.vercel.app', 'http://localhost:3000', 'https://www.broiscooked.xyz'];
 
 export default clerkMiddleware(async (auth, request) => {
   // Get the origin from the request headers
