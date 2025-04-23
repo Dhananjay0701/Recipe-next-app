@@ -8,6 +8,9 @@ import { NextRequest } from 'next/server';
 // Define API routes that need CORS
 const isApiRoute = createRouteMatcher(['/api/(.*)']);
 
+// Define allowed origin
+const allowedOrigin = 'https://broiscooked.xyz';
+
 export default clerkMiddleware(async (auth, request) => {
   // Handle CORS preflight requests for API routes
   if (isApiRoute(request) && request.method === 'OPTIONS') {
@@ -15,9 +18,9 @@ export default clerkMiddleware(async (auth, request) => {
       status: 200,
       headers: {
         'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Allow-Origin': '*', // Be more specific in production if possible
+        'Access-Control-Allow-Origin': allowedOrigin, // Use specific origin
         'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-        'Access-Control-Allow-Headers': 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cache-Control', // Added Cache-Control
+        'Access-Control-Allow-Headers': 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cache-Control, Pragma', // Added Cache-Control, Pragma
       },
     });
   }
@@ -34,9 +37,9 @@ export default clerkMiddleware(async (auth, request) => {
   // Add CORS headers to actual API responses AFTER Clerk processing
   if (isApiRoute(request)) {
     response.headers.set('Access-Control-Allow-Credentials', 'true');
-    response.headers.set('Access-Control-Allow-Origin', '*'); // Be more specific in production if possible
+    response.headers.set('Access-Control-Allow-Origin', allowedOrigin); // Use specific origin
     response.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cache-Control'); // Added Cache-Control
+    response.headers.set('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cache-Control, Pragma'); // Added Cache-Control, Pragma
   }
 
   return response;
