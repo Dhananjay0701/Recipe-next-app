@@ -8,19 +8,24 @@ import { NextRequest } from 'next/server';
 // Define API routes that need CORS
 const isApiRoute = createRouteMatcher(['/api/(.*)']);
 
-// Define allowed origin
-const allowedOrigin = 'https://broiscooked.xyz';
+// Define allowed origins - both the .xyz and .vercel.app domains
+const allowedOrigins = ['https://broiscooked.xyz', 'https://broiscooked.vercel.app', 'http://localhost:3000'];
 
 export default clerkMiddleware(async (auth, request) => {
+  // Get the origin from the request headers
+  const origin = request.headers.get('origin');
+  // Check if the origin is allowed or use a default for testing
+  const responseOrigin = origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+
   // Handle CORS preflight requests for API routes
   if (isApiRoute(request) && request.method === 'OPTIONS') {
     return NextResponse.json({}, {
       status: 200,
       headers: {
         'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Allow-Origin': allowedOrigin, // Use specific origin
+        'Access-Control-Allow-Origin': responseOrigin,
         'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-        'Access-Control-Allow-Headers': 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cache-Control, Pragma', // Added Cache-Control, Pragma
+        'Access-Control-Allow-Headers': 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cache-Control, Pragma',
       },
     });
   }
@@ -37,9 +42,9 @@ export default clerkMiddleware(async (auth, request) => {
   // Add CORS headers to actual API responses AFTER Clerk processing
   if (isApiRoute(request)) {
     response.headers.set('Access-Control-Allow-Credentials', 'true');
-    response.headers.set('Access-Control-Allow-Origin', allowedOrigin); // Use specific origin
+    response.headers.set('Access-Control-Allow-Origin', responseOrigin);
     response.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cache-Control, Pragma'); // Added Cache-Control, Pragma
+    response.headers.set('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Cache-Control, Pragma');
   }
 
   return response;
