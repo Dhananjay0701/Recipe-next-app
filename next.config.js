@@ -5,7 +5,7 @@ const nextConfig = {
   experimental: {
     // Disable optimized loading for more predictable updates
     disableOptimizedLoading: true,
-    // Keep server actions enabled
+    // serverActions is enabled by default in newer Next.js versions
     serverActions: true
   },
   // Disable image caching to ensure fresh images

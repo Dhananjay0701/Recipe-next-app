@@ -2,8 +2,12 @@ import { NextResponse } from 'next/server';
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextRequest } from 'next/server';
 
-// Define public routes (optional, but good practice if you intend to protect routes later)
-// const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/api/public-route(.*)']);
+// Define routes that should be ignored by Clerk's default processing
+// Especially important for routes handling raw data streams like file uploads
+const ignoredRoutes = [
+  '/api/interview-prep/transcribe',
+  '/api/interview-prep/upload-resume',
+];
 
 // Define API routes that need CORS
 const isApiRoute = createRouteMatcher(['/api/(.*)']);
@@ -17,7 +21,7 @@ export default clerkMiddleware(async (auth, request) => {
   // Check if the origin is allowed or use a default for testing
   const responseOrigin = origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
 
-  // Handle CORS preflight requests for API routes
+  // Handle CORS preflight requests for API routes FIRST
   if (isApiRoute(request) && request.method === 'OPTIONS') {
     return NextResponse.json({}, {
       status: 200,
@@ -30,16 +34,16 @@ export default clerkMiddleware(async (auth, request) => {
     });
   }
 
-  // Example: Protect specific routes if needed (uncomment and adjust)
-  // const isProtectedRoute = createRouteMatcher(['/dashboard(.*)']);
-  // if (isProtectedRoute(request) && !isPublicRoute(request)) {
-  //   await auth.protect();
-  // }
+  // Allow Clerk to handle auth for non-ignored routes
+  // For ignored routes, Clerk logic is skipped, but we still need to proceed
 
-  // For all requests, let Clerk handle auth and then proceed
+  // If you needed to protect routes later, you would add checks here based on auth()
+  // e.g., if (!auth().userId && isProtectedRoute(request)) return auth().redirectToSignIn();
+
+  // Get the response from the next middleware or handler
   const response = NextResponse.next();
 
-  // Add CORS headers to actual API responses AFTER Clerk processing
+  // Add CORS headers to actual API responses AFTER Clerk processing (or skipping)
   if (isApiRoute(request)) {
     response.headers.set('Access-Control-Allow-Credentials', 'true');
     response.headers.set('Access-Control-Allow-Origin', responseOrigin);
@@ -48,10 +52,10 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   return response;
-
-  // If you needed to combine with another middleware like next-intl:
-  // return anotherMiddleware(request);
-}, { debug: true });
+}, {
+  debug: false,
+  ignoredRoutes: ignoredRoutes // Pass the ignored routes to Clerk
+});
 
 // Configure middleware to run on specific paths
 export const config = {

@@ -7,20 +7,26 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "clean": "rm -rf node_modules .next && npm install"
+    "clean": "rm -rf node_modules .next && npm install",
+    "watch": "watch 'npm run build' ./app/"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",
     "@clerk/nextjs": "^6.17.0",
+    "@deepgram/sdk": "^3.3.5",
+    "@google/genai": "^0.10.0",
+    "@google/generative-ai": "^0.24.0",
     "@mui/material": "^6.4.8",
     "@supabase/supabase-js": "^2.49.3",
     "dotenv": "^16.4.7",
     "formidable": "^3.5.2",
     "next": "^14.2.28",
+    "openai": "^4.35.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.5.0",
-    "replicate": "1.0.1"
+    "replicate": "1.0.1",
+    "watch": "^1.0.2"
   },
   "engines": {
     "node": "20.x"
