@@ -17,8 +17,7 @@ const R2 = new S3Client({
   },
 });
 
-const BUCKET_NAME = process.env.R2_BUCKET_NAME;
-const STATIC_BUCKET_NAME = process.env.R2_STATIC_BUCKET_NAME || BUCKET_NAME;
+const STATIC_BUCKET_NAME = process.env.R2_STATIC_BUCKET_NAME
 
 // Determine which LLM to use based on available API keys
 const LLM_PROVIDER = OPENAI_API_KEY ? 'openai' : (GOOGLE_API_KEY ? 'google' : null);
@@ -117,9 +116,21 @@ export async function POST(request) {
   }
 
   try {
-    const { transcript, resumeText, history, r2Path: providedR2Path, resumeBase64 } = await request.json();
+    const requestBody = await request.json();
+    const { 
+      transcript, 
+      resumeText, 
+      history, 
+      r2Path: providedR2Path, 
+      resumeBase64, 
+      promptFilePath, 
+      promptType 
+    } = requestBody;
 
-    console.log(`Provided r2Path: ${providedR2Path || 'not provided'}`);
+    //console.log('Request body:', JSON.stringify(requestBody, null, 2));
+    //console.log(`Provided r2Path: ${providedR2Path || 'not provided'}`);
+    //console.log(`Prompt type selected: ${promptType || 'not specified'}`);
+    //console.log(`Prompt file path: ${promptFilePath || 'not provided'}`);
     
     // If r2Path is not provided, try to find the most recent resume
     let r2Path = providedR2Path;
@@ -139,10 +150,44 @@ export async function POST(request) {
     // Build the prompt for the LLM by fetching from R2
     let prompt;
     try {
-      prompt = await fetchFromR2('data_for_interview/law.txt');
+      // Case 1: Custom prompt was uploaded
+      if (promptFilePath && promptFilePath.includes('prompt.txt')) {
+        try {
+          prompt = await fetchFromR2(promptFilePath);
+          console.log('Using custom uploaded prompt from:', promptFilePath);
+        } catch (promptError) {
+          console.error(`Failed to fetch custom prompt from ${promptFilePath}:`, promptError);
+          // Fall back to selected type or default
+        }
+      } 
+      // Case 2: MLE interview type was selected
+      else if (promptType === 'MLE') {
+        try {
+          prompt = await fetchFromR2('data_for_interview/mle.txt');
+          console.log('Using MLE prompt based on selection');
+        } catch (error) {
+          console.error('Failed to fetch MLE prompt, using hardcoded MLE prompt:', error);
+          prompt = "You are an expert Machine Learning Engineer interviewer conducting a mock interview. Ask relevant technical questions about ML concepts, algorithms, projects, and practical experience based on the candidate's resume and previous answers.";
+        }
+      } 
+      // Case 3: Law interview type was selected or default
+      else if (promptType === 'Law') {
+        try {
+          prompt = await fetchFromR2('data_for_interview/law.txt');
+          console.log('Using law prompt from R2');
+        } catch (error) {
+          console.error('Failed to fetch law prompt, using hardcoded law prompt:', error);
+          prompt = "You are an expert legal interviewer conducting a mock interview. Ask relevant questions based on the candidate's resume and previous answers.";
+        }
+      }
     } catch (error) {
-      console.error('Failed to fetch prompt from R2, using default prompt:', error);
-      prompt = "You are an expert legal interviewer conducting a mock interview. Ask relevant questions based on the candidate's resume and previous answers.";
+      console.error('Error in prompt selection logic:', error);
+      // Final fallback
+      if (promptType === 'MLE') {
+        prompt = "You are an expert Machine Learning Engineer interviewer conducting a mock interview. Ask relevant technical questions about ML concepts, algorithms, projects, and practical experience based on the candidate's resume and previous answers.";
+      } else {
+        prompt = "You are an expert legal interviewer conducting a mock interview. Ask relevant questions based on the candidate's resume and previous answers.";
+      }
     }
     
     // Google Gemini will handle the PDF directly, OpenAI needs text
@@ -159,7 +204,7 @@ export async function POST(request) {
         ${history}
         New user answer (transcript): ${transcript}
         Your Turn: Generate the next interview question based on the Context and Guidelines above.`;
-    
+    console.log('Prompt:', prompt);
     let message = '';
     
     // Call the appropriate LLM API

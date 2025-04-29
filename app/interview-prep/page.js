@@ -7,12 +7,15 @@ export default function InterviewPrep() {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [messages, setMessages] = useState([
-    { role: 'coach', content: 'Hello! I\'m your interview coach. To get started, please upload your resume and click the microphone button to begin answering questions.' }
+    { role: 'coach', content: 'Hello! I\'m your interview coach. To get started, please upload your resume, choose an interview type (Law or MLE), or upload a custom prompt, then click the microphone button to begin answering questions.' }
   ]);
   const [loading, setLoading] = useState(false);
   const [resume, setResume] = useState(null);
   const [resumeFilePath, setResumeFilePath] = useState('');
   const [resumeBase64, setResumeBase64] = useState('');
+  const [promptFile, setPromptFile] = useState(null);
+  const [promptFilePath, setPromptFilePath] = useState('');
+  const [promptType, setPromptType] = useState('');
   const [error, setError] = useState('');
   
   const mediaRecorderRef = useRef(null);
@@ -120,43 +123,6 @@ export default function InterviewPrep() {
     }
   };
   
-  const getChatResponse = async (userTranscript, updatedMessages) => {
-    try {
-      setLoading(true);
-      
-      const history = updatedMessages.map(msg => `${msg.role === 'coach' ? 'Coach' : 'You'}: ${msg.content}`).join('\n');
-      
-      const response = await fetch('/api/interview-prep/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          transcript: userTranscript,
-          resumeFilePath,
-          resumeBase64,
-          history,
-        }),
-      });
-      
-      if (!response.ok) throw new Error('Failed to get coach response');
-      
-      const data = await response.json();
-      
-      // Add coach message to chat
-      setMessages([
-        ...updatedMessages,
-        { role: 'coach', content: data.message }
-      ]);
-      
-    } catch (err) {
-      setError('Failed to get interview coach response. Please try again.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
   const handleResumeUpload = async (e) => {
     const file = e.target.files[0];
     
@@ -197,11 +163,122 @@ export default function InterviewPrep() {
       // Add a confirmation message
       setMessages([
         ...messages,
-        { role: 'coach', content: 'Resume uploaded successfully! I\'ll use this information to tailor the interview questions. Click the microphone to begin the interview.' }
+        { role: 'coach', content: 'Resume uploaded successfully! I\'ll use this information to tailor the interview questions. Click the microphone to begin the interview.' }, 
+        { role: 'coach', content: 'Let\'s start with your introduction.' }
       ]);
       
     } catch (err) {
       setError('Failed to upload resume. Please try again.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handlePromptTypeSelect = (type) => {
+    // Clear any previously selected custom prompt
+    setPromptFile(null);
+    // Set the prompt type (either 'Law' or 'MLE')
+    setPromptType(type);
+    // If we had a custom prompt path before, clear it
+    setPromptFilePath('');
+    
+    console.log(`Selected ${type} interview type`);
+  };
+  
+  const handlePromptUpload = async (e) => {
+    const file = e.target.files[0];
+    
+    if (!file) return;
+    
+    // Validate file type
+    if (file.type !== 'text/plain') {
+      setError('Please upload a text (.txt) file for the prompt.');
+      return;
+    }
+    
+    if (file.size > 1 * 1024 * 1024) { // 1MB
+      setError('Prompt file size should be less than 1MB.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError('');
+      setPromptFile(file);
+      
+      // Clear any previously selected prompt type
+      setPromptType('');
+      
+      const formData = new FormData();
+      formData.append('promptFile', file);
+      
+      const response = await fetch('/api/interview-prep/upload-prompt', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) throw new Error('Prompt upload failed');
+      
+      const data = await response.json();
+      
+      // Store the file path for later use
+      setPromptFilePath(data.filePath || '');
+      
+    } catch (err) {
+      setError('Failed to upload prompt file. Please try again.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const getChatResponse = async (userTranscript, updatedMessages) => {
+    try {
+      setLoading(true);
+      
+      const history = updatedMessages.map(msg => `${msg.role === 'coach' ? 'Coach' : 'You'}: ${msg.content}`).join('\n');
+      
+      // Prepare the request data
+      const requestData = {
+        transcript: userTranscript,
+        resumeFilePath,
+        resumeBase64,
+        history,
+      };
+      
+      // Only add promptFilePath if we have a custom prompt
+      if (promptFile && promptFilePath) {
+        requestData.promptFilePath = promptFilePath;
+      }
+      
+      // Always include the promptType if selected (even if no file path)
+      if (promptType) {
+        requestData.promptType = promptType;
+      }
+      
+      console.log('Sending request data:', requestData);
+      
+      const response = await fetch('/api/interview-prep/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+      
+      if (!response.ok) throw new Error('Failed to get coach response');
+      
+      const data = await response.json();
+      
+      // Add coach message to chat
+      setMessages([
+        ...updatedMessages,
+        { role: 'coach', content: data.message }
+      ]);
+      
+    } catch (err) {
+      setError('Failed to get interview coach response. Please try again.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -225,6 +302,38 @@ export default function InterviewPrep() {
           />
         </label>
         {resume && <span className={styles.fileName}>{resume.name}</span>}
+      </div>
+      
+      <div className={styles.promptOptionsContainer}>
+        <div className={styles.promptTypeButtons}>
+          <button 
+            className={`${styles.promptTypeButton} ${promptType === 'Law' ? styles.selected : ''}`} 
+            onClick={() => handlePromptTypeSelect('Law')}
+            disabled={loading}
+          >
+            Law Interview
+          </button>
+          <button 
+            className={`${styles.promptTypeButton} ${promptType === 'MLE' ? styles.selected : ''}`} 
+            onClick={() => handlePromptTypeSelect('MLE')}
+            disabled={loading}
+          >
+            MLE Interview
+          </button>
+        </div>
+
+        <div className={styles.customPromptContainer}>
+          <label className={styles.uploadButton}>
+            {promptFile ? 'Custom Prompt ✓' : 'Upload Custom Prompt'}
+            <input
+              type="file"
+              accept=".txt"
+              onChange={handlePromptUpload}
+              style={{ display: 'none' }}
+            />
+          </label>
+          {promptFile && <span className={styles.fileName}>{promptFile.name}</span>}
+        </div>
       </div>
       
       <div className={styles.chatContainer}>
